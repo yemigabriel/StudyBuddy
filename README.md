@@ -13,7 +13,7 @@ It uses a RAG pipeline, OpenAI-powered agents, S3-backed memory, and AWS deploym
 
 | Landing page | Chat | Quiz | Flashcards
 |---|---|---|---|
-| <img width="1413" height="720" alt="Screenshot 2026-04-27 at 22 52 51" src="https://github.com/user-attachments/assets/350cca84-8be6-4bfe-86b7-e29da65ee94f" /> | <img width="1235" height="692" alt="Screenshot 2026-04-27 at 22 49 00" src="https://github.com/user-attachments/assets/fa049543-5bc4-42cf-b0f4-8862ef2ac41b" /> | <img width="1237" height="700" alt="Screenshot 2026-04-27 at 22 50 51" src="https://github.com/user-attachments/assets/50c6c5f6-f943-4b39-9365-4a828219d3c4" /> | <img width="1237" height="698" alt="Screenshot 2026-04-27 at 22 51 45" src="https://github.com/user-attachments/assets/8cba3ddf-4df3-4360-82ed-16921403afb9" /> |
+| <img width="1413" height="720" alt="Screenshot 2026-04-27 at 22 52 51" src="https://github.com/user-attachments/assets/350cca84-8be6-4bfe-86b7-e29da65ee94f" /> | <img width="1010" height="718" alt="Screenshot 2026-04-27 at 23 07 58" src="https://github.com/user-attachments/assets/4751a954-9c9b-495d-865a-5822ffae5484" /> | <img width="1237" height="700" alt="Screenshot 2026-04-27 at 22 50 51" src="https://github.com/user-attachments/assets/50c6c5f6-f943-4b39-9365-4a828219d3c4" /> | <img width="1237" height="698" alt="Screenshot 2026-04-27 at 22 51 45" src="https://github.com/user-attachments/assets/8cba3ddf-4df3-4360-82ed-16921403afb9" /> |
 
 
 ## Architecture
