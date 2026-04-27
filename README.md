@@ -13,7 +13,7 @@ It uses a RAG pipeline, OpenAI-powered agents, S3-backed memory, and AWS deploym
 
 ```text
 Frontend (Next.js static export on S3 + CloudFront)
-  -> Uploads files
+  -> Upload-files
   -> Sends chat / summary / quiz / flashcards requests
   -> Renders chat, quiz modal, and flashcards modal
 
@@ -47,6 +47,7 @@ Storage
 - Streaming chat responses locally
 - Upload-first frontend flow
 - Quiz and flashcards modal UI
+- Pytest backend test suite with endpoint coverage
 - Terraform-based AWS deployment
 - GitHub Actions CI/CD pipeline
 
@@ -82,6 +83,13 @@ uv venv
 source .venv/bin/activate
 uv pip install -r requirements.txt
 uv run uvicorn server:app --reload
+```
+
+Run tests:
+
+```bash
+cd backend
+UV_CACHE_DIR=.uv-cache uv run pytest tests -q
 ```
 
 ### Frontend
@@ -128,3 +136,4 @@ The CI/CD workflow also deploys on push using GitHub Actions.
 - Local streaming works well; AWS may buffer responses depending on the current Lambda/API Gateway path.
 - Upload transitions to chat only after successful ingestion/indexing.
 - Memory is stored locally first, then synced to S3.
+- The current `/upload` API path is best for smaller files; larger files should eventually move to direct-to-S3 upload plus async ingestion.
