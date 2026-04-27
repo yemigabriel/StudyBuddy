@@ -1,0 +1,17 @@
+from pydantic import BaseModel, Field
+
+
+class ChatRequest(BaseModel):
+    message: str = Field(min_length=1)
+    session_id: str = Field(min_length=1)
+
+
+class ChatResponse(BaseModel):
+    response: str
+    session_id: str
+
+
+class UploadResponse(BaseModel):
+    filename: str
+    content_type: str
+    size: int
