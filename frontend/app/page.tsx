@@ -26,6 +26,16 @@ type Message = {
   content: string;
 };
 
+type StreamEventPayload = {
+  content?: string;
+  response?: string;
+  session_id?: string;
+  context?: string[];
+  message?: string | null;
+  options?: string[];
+  document_name?: string | null;
+};
+
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
 
@@ -91,7 +101,7 @@ export default function Home() {
     }
 
     try {
-      const response = await fetch(`${API_BASE_URL}/chat`, {
+      const response = await fetch(`${API_BASE_URL}/chat/stream`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -100,26 +110,84 @@ export default function Home() {
           document_name: documentName,
         }),
       });
-      const data: ChatResponse = await response.json();
-
-      if (data.type === "disambiguation") {
-        setPendingQuery(message);
-        setDisambiguation(data);
-        setMessages((current) => [
-          ...current,
-          {
-            role: "assistant",
-            content: data.message ?? "Which document are you referring to?",
-          },
-        ]);
-        return;
+      if (!response.ok || !response.body) {
+        throw new Error("Streaming request failed.");
       }
 
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let assistantIndex = -1;
+
+      setMessages((current) => {
+        assistantIndex = current.length;
+        return [...current, { role: "assistant", content: "" }];
+      });
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) {
+          break;
+        }
+
+        buffer += decoder.decode(value, { stream: true });
+        const events = buffer.split("\n\n");
+        buffer = events.pop() ?? "";
+
+        for (const rawEvent of events) {
+          const parsed = parseSseEvent(rawEvent);
+          if (!parsed) {
+            continue;
+          }
+
+          if (parsed.event === "disambiguation") {
+            const payload = parsed.payload;
+            setPendingQuery(message);
+            setDisambiguation({
+              response: "",
+              session_id: payload.session_id ?? sessionId,
+              context: [],
+              type: "disambiguation",
+              message: payload.message ?? "Which document are you referring to?",
+              options: payload.options ?? [],
+              document_name: payload.document_name ?? null,
+            });
+            setMessages((current) => {
+              const next = [...current];
+              next[assistantIndex] = {
+                role: "assistant",
+                content: payload.message ?? "Which document are you referring to?",
+              };
+              return next;
+            });
+            return;
+          }
+
+          if (parsed.event === "chunk") {
+            const token = parsed.payload.content ?? "";
+            setMessages((current) => {
+              const next = [...current];
+              next[assistantIndex] = {
+                role: "assistant",
+                content: `${next[assistantIndex]?.content ?? ""}${token}`,
+              };
+              return next;
+            });
+          }
+
+          if (parsed.event === "done") {
+            setPendingQuery("");
+          }
+        }
+      }
+    } catch {
       setMessages((current) => [
         ...current,
-        { role: "assistant", content: data.response },
+        {
+          role: "assistant",
+          content: "I couldn't stream a response right now. Please try again.",
+        },
       ]);
-      setPendingQuery("");
     } finally {
       setIsSending(false);
     }
@@ -228,4 +296,22 @@ export default function Home() {
       </section>
     </main>
   );
+}
+
+function parseSseEvent(rawEvent: string): { event: string; payload: StreamEventPayload } | null {
+  const lines = rawEvent.split("\n");
+  const eventLine = lines.find((line) => line.startsWith("event: "));
+  const dataLine = lines.find((line) => line.startsWith("data: "));
+  if (!eventLine || !dataLine) {
+    return null;
+  }
+
+  try {
+    return {
+      event: eventLine.slice(7).trim(),
+      payload: JSON.parse(dataLine.slice(6)),
+    };
+  } catch {
+    return null;
+  }
 }

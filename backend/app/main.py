@@ -1,10 +1,13 @@
+import json
+
 from fastapi import FastAPI, File, Form, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from mangum import Mangum
 
 from app.config import get_settings
 from app.models import ChatRequest, ChatResponse, UploadResponse
-from app.services.chat_service import generate_chat_response
+from app.services.chat_service import generate_chat_response, generate_chat_stream
 from app.services.memory_service import (
     append_conversation,
     get_selected_document,
@@ -43,6 +46,71 @@ async def upload_document(
 
 @app.post("/chat", response_model=ChatResponse)
 def chat(request: ChatRequest) -> ChatResponse:
+    history, resolved_document_name, disambiguation = _resolve_chat_context(request)
+    if disambiguation:
+        return disambiguation
+
+    response = generate_chat_response(
+        request,
+        history=history,
+        document_name=resolved_document_name,
+    )
+    append_conversation(request.session_id, request.message, response.response)
+    return response
+
+
+@app.post("/chat/stream")
+def chat_stream(request: ChatRequest) -> StreamingResponse:
+    history, resolved_document_name, disambiguation = _resolve_chat_context(request)
+    if disambiguation:
+        def disambiguation_stream() -> str:
+            yield _sse_event(
+                "disambiguation",
+                {
+                    "session_id": disambiguation.session_id,
+                    "message": disambiguation.message,
+                    "options": disambiguation.options,
+                    "document_name": disambiguation.document_name,
+                },
+            )
+
+        return StreamingResponse(disambiguation_stream(), media_type="text/event-stream")
+
+    chunks, token_stream = generate_chat_stream(
+        request,
+        history=history,
+        document_name=resolved_document_name,
+    )
+
+    def stream_events() -> str:
+        full_response = ""
+        yield _sse_event(
+            "metadata",
+            {
+                "session_id": request.session_id,
+                "context": chunks,
+                "document_name": resolved_document_name,
+            },
+        )
+        for token in token_stream:
+            full_response += token
+            yield _sse_event("chunk", {"content": token})
+        append_conversation(request.session_id, request.message, full_response)
+        yield _sse_event(
+            "done",
+            {
+                "response": full_response,
+                "session_id": request.session_id,
+                "document_name": resolved_document_name,
+            },
+        )
+
+    return StreamingResponse(stream_events(), media_type="text/event-stream")
+
+
+def _resolve_chat_context(
+    request: ChatRequest,
+) -> tuple[list[dict[str, str]], str | None, ChatResponse | None]:
     history = get_session_history(request.session_id)
     session_documents = list_session_documents(request.session_id)
     session_document_names = [item["document_name"] for item in session_documents]
@@ -60,21 +128,14 @@ def chat(request: ChatRequest) -> ChatResponse:
     elif selected_document and is_ambiguous_query(request.message):
         resolved_document_name = selected_document
     elif len(session_document_names) > 1 and is_ambiguous_query(request.message):
-        return ChatResponse(
+        return history, resolved_document_name, ChatResponse(
             session_id=request.session_id,
             type="disambiguation",
             message="Which document are you referring to?",
             options=session_document_names,
             document_name=selected_document,
         )
-
-    response = generate_chat_response(
-        request,
-        history=history,
-        document_name=resolved_document_name,
-    )
-    append_conversation(request.session_id, request.message, response.response)
-    return response
+    return history, resolved_document_name, None
 
 
 def _resolve_explicit_document_name(message: str, document_names: list[str]) -> str | None:
@@ -83,6 +144,10 @@ def _resolve_explicit_document_name(message: str, document_names: list[str]) -> 
         if document_name.lower() in normalized_message:
             return document_name
     return None
+
+
+def _sse_event(event: str, payload: dict) -> str:
+    return f"event: {event}\ndata: {json.dumps(payload)}\n\n"
 
 
 handler = Mangum(app)
