@@ -1,0 +1,22 @@
+[
+  {
+    "role": "user",
+    "content": "What produces ATP?",
+    "timestamp": "2026-04-27T07:52:43.450489+00:00"
+  },
+  {
+    "role": "assistant",
+    "content": "I found relevant study material for your question.\n\nQuestion: What produces ATP?\n\nPrevious turns in this session: 0\n\nMost relevant notes:\n- ATP stores energy. Mitochondria produce ATP for cells.",
+    "timestamp": "2026-04-27T07:52:43.450489+00:00"
+  },
+  {
+    "role": "user",
+    "content": "Do we have prior messages?",
+    "timestamp": "2026-04-27T07:52:43.452632+00:00"
+  },
+  {
+    "role": "assistant",
+    "content": "I found relevant study material for your question.\n\nQuestion: Do we have prior messages?\n\nPrevious turns in this session: 1\n\nMost relevant notes:\n- ATP stores energy. Mitochondria produce ATP for cells.",
+    "timestamp": "2026-04-27T07:52:43.452632+00:00"
+  }
+]

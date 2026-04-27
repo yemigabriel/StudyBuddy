@@ -4,6 +4,7 @@ from mangum import Mangum
 
 from app.models import ChatRequest, ChatResponse, UploadResponse
 from app.services.chat_service import generate_chat_response
+from app.services.memory_service import append_conversation, get_session_history
 from app.services.upload_service import ingest_upload
 
 app = FastAPI(title="StudyBuddy API", version="0.1.0")
@@ -30,7 +31,10 @@ async def upload_document(file: UploadFile = File(...)) -> UploadResponse:
 
 @app.post("/chat", response_model=ChatResponse)
 def chat(request: ChatRequest) -> ChatResponse:
-    return generate_chat_response(request)
+    history = get_session_history(request.session_id)
+    response = generate_chat_response(request, history=history)
+    append_conversation(request.session_id, request.message, response.response)
+    return response
 
 
 handler = Mangum(app)
