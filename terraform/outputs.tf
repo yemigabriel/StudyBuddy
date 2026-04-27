@@ -6,6 +6,10 @@ output "memory_bucket_name" {
   value = aws_s3_bucket.memory.bucket
 }
 
+output "ecr_repository_url" {
+  value = aws_ecr_repository.backend.repository_url
+}
+
 output "api_base_url" {
   value = aws_apigatewayv2_stage.default.invoke_url
 }

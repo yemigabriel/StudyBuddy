@@ -6,7 +6,9 @@ from pathlib import Path
 import boto3
 from botocore.exceptions import BotoCoreError, ClientError
 
-MEMORY_DIR = Path("../memory/sessions")
+from app.config import get_settings
+
+MEMORY_DIR = Path(get_settings().memory_dir)
 
 
 def _session_path(session_id: str) -> Path:

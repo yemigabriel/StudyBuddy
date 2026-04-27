@@ -4,12 +4,13 @@ from uuid import uuid4
 
 from fastapi import UploadFile
 
+from app.config import get_settings
 from app.parsers.document_parser import parse_document
 from app.services.chunking_service import split_text
 from app.services.memory_service import add_session_document
 from app.services.vector_store import get_vector_store
 
-UPLOAD_DIR = Path("data/uploads")
+UPLOAD_DIR = Path(get_settings().upload_dir)
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 logger = logging.getLogger(__name__)
 

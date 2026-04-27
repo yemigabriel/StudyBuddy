@@ -1,9 +1,118 @@
 provider "aws" {
   region = var.aws_region
+
+  default_tags {
+    tags = local.common_tags
+  }
 }
 
 locals {
   lambda_name = "${var.project_name}-backend"
+  common_tags = {
+    Project     = var.project_name
+    Environment = var.environment
+    ManagedBy   = "terraform"
+  }
+  effective_cors_allow_origins = length(var.cors_allow_origins) > 0 ? var.cors_allow_origins : [
+    "https://${aws_cloudfront_distribution.frontend.domain_name}"
+  ]
+  lambda_environment = merge(
+    {
+      STUDYBUDDY_MEMORY_BUCKET = aws_s3_bucket.memory.bucket
+      OPENAI_API_KEY           = var.openai_api_key
+      VECTOR_DB                = var.vector_db
+      CORS_ALLOW_ORIGINS       = join(",", local.effective_cors_allow_origins)
+    },
+    var.vector_db == "pinecone" ? {
+      PINECONE_API_KEY    = var.pinecone_api_key
+      PINECONE_INDEX_NAME = var.pinecone_index_name
+    } : {}
+  )
+  backend_source_files = concat(
+    [
+      "Dockerfile.lambda",
+      "requirements.txt",
+      "server.py",
+    ],
+    tolist(fileset("${path.module}/../backend/app", "**"))
+  )
+  backend_source_hash = sha1(
+    join(
+      "",
+      [
+        for file in sort(local.backend_source_files) :
+        filemd5(
+          contains(["Dockerfile.lambda", "requirements.txt", "server.py"], file)
+          ? "${path.module}/../backend/${file}"
+          : "${path.module}/../backend/app/${file}"
+        )
+      ]
+    )
+  )
+  frontend_source_files = concat(
+    [
+      "next.config.ts",
+      "package.json",
+      "package-lock.json",
+      "tsconfig.json",
+      "postcss.config.js",
+      "tailwind.config.ts",
+    ],
+    tolist(fileset("${path.module}/../frontend/app", "**"))
+  )
+  frontend_source_hash = sha1(
+    join(
+      "",
+      [
+        for file in sort(local.frontend_source_files) :
+        filemd5(
+          contains(
+            [
+              "next.config.ts",
+              "package.json",
+              "package-lock.json",
+              "tsconfig.json",
+              "postcss.config.js",
+              "tailwind.config.ts",
+            ],
+            file
+          )
+          ? "${path.module}/../frontend/${file}"
+          : "${path.module}/../frontend/app/${file}"
+        )
+      ]
+    )
+  )
+  lambda_image_uri = "${aws_ecr_repository.backend.repository_url}:${var.lambda_image_tag}"
+}
+
+resource "aws_ecr_repository" "backend" {
+  name                 = var.ecr_repository_name
+  image_tag_mutability = "MUTABLE"
+
+  image_scanning_configuration {
+    scan_on_push = true
+  }
+}
+
+data "aws_ecr_image" "backend" {
+  depends_on = [terraform_data.backend_image]
+
+  repository_name = aws_ecr_repository.backend.name
+  image_tag       = var.lambda_image_tag
+}
+
+resource "terraform_data" "backend_image" {
+  triggers_replace = [
+    local.backend_source_hash,
+    var.lambda_image_tag,
+    aws_ecr_repository.backend.repository_url,
+  ]
+
+  provisioner "local-exec" {
+    command     = "python3 deploy.py --ecr-uri ${local.lambda_image_uri}"
+    working_dir = "${path.module}/../backend"
+  }
 }
 
 resource "aws_s3_bucket" "frontend" {
@@ -103,18 +212,16 @@ resource "aws_iam_role_policy" "memory_access" {
 }
 
 resource "aws_lambda_function" "backend" {
-  function_name    = local.lambda_name
-  filename         = var.lambda_zip_path
-  source_code_hash = filebase64sha256(var.lambda_zip_path)
-  role             = aws_iam_role.lambda_exec.arn
-  handler          = "server.handler"
-  runtime          = "python3.12"
-  timeout          = 30
+  depends_on    = [terraform_data.backend_image]
+  function_name = local.lambda_name
+  package_type  = "Image"
+  image_uri     = "${aws_ecr_repository.backend.repository_url}@${data.aws_ecr_image.backend.image_digest}"
+  role          = aws_iam_role.lambda_exec.arn
+  timeout       = var.lambda_timeout
+  memory_size   = var.lambda_memory_size
 
   environment {
-    variables = {
-      STUDYBUDDY_MEMORY_BUCKET = aws_s3_bucket.memory.bucket
-    }
+    variables = local.lambda_environment
   }
 }
 
@@ -123,9 +230,9 @@ resource "aws_apigatewayv2_api" "http" {
   protocol_type = "HTTP"
 
   cors_configuration {
-    allow_origins = ["*"]
-    allow_methods = ["GET", "POST", "OPTIONS"]
-    allow_headers = ["*"]
+    allow_origins = local.effective_cors_allow_origins
+    allow_methods = var.cors_allow_methods
+    allow_headers = var.cors_allow_headers
   }
 }
 
@@ -198,5 +305,25 @@ resource "aws_cloudfront_distribution" "frontend" {
 
   viewer_certificate {
     cloudfront_default_certificate = true
+  }
+}
+
+resource "terraform_data" "frontend_publish" {
+  depends_on = [
+    aws_s3_bucket.frontend,
+    aws_apigatewayv2_stage.default,
+    aws_cloudfront_distribution.frontend,
+  ]
+
+  triggers_replace = [
+    local.frontend_source_hash,
+    aws_s3_bucket.frontend.bucket,
+    aws_apigatewayv2_stage.default.invoke_url,
+    aws_cloudfront_distribution.frontend.id,
+  ]
+
+  provisioner "local-exec" {
+    command     = "npm ci && NEXT_PUBLIC_API_BASE_URL=${aws_apigatewayv2_stage.default.invoke_url} npm run build && aws s3 sync out/ s3://${aws_s3_bucket.frontend.bucket} --delete && aws cloudfront create-invalidation --distribution-id ${aws_cloudfront_distribution.frontend.id} --paths '/*'"
+    working_dir = "${path.module}/../frontend"
   }
 }

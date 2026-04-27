@@ -2,6 +2,7 @@ import math
 import re
 from pathlib import Path
 
+from app.config import get_settings
 from app.parsers.document_parser import parse_document
 from app.services.chunking_service import split_text
 from app.services.embedding_service import embed_text
@@ -165,7 +166,7 @@ def retrieve_from_source_document(
 
 
 def find_uploaded_document(document_name: str) -> Path | None:
-    upload_dir = Path("data/uploads")
+    upload_dir = Path(get_settings().upload_dir)
     matches = sorted(upload_dir.glob(f"*-{document_name}"))
     return matches[-1] if matches else None
 

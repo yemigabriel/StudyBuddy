@@ -2,6 +2,7 @@ from fastapi import FastAPI, File, Form, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from mangum import Mangum
 
+from app.config import get_settings
 from app.models import ChatRequest, ChatResponse, UploadResponse
 from app.services.chat_service import generate_chat_response
 from app.services.memory_service import (
@@ -14,12 +15,13 @@ from app.services.memory_service import (
 from app.services.retriever_service import is_ambiguous_query
 from app.services.upload_service import ingest_upload
 
+settings = get_settings()
 app = FastAPI(title="StudyBuddy API", version="0.1.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=settings.cors_allow_origins,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )

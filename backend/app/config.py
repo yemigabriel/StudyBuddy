@@ -1,8 +1,34 @@
 import os
-from dotenv import load_dotenv
 from dataclasses import dataclass
+from pathlib import Path
+
+from dotenv import load_dotenv
 
 load_dotenv()
+
+
+def _is_lambda_runtime() -> bool:
+    return bool(os.getenv("AWS_LAMBDA_FUNCTION_NAME") or os.getenv("LAMBDA_TASK_ROOT"))
+
+
+def _default_runtime_data_root() -> Path:
+    if _is_lambda_runtime():
+        return Path("/tmp/studybuddy")
+    return Path("data")
+
+
+def _default_memory_root() -> Path:
+    if _is_lambda_runtime():
+        return Path("/tmp/studybuddy/memory/sessions")
+    return Path("../memory/sessions")
+
+
+def _default_cors_origins() -> list[str]:
+    raw = os.getenv("CORS_ALLOW_ORIGINS", "")
+    if not raw.strip():
+        return ["*"]
+    return [origin.strip() for origin in raw.split(",") if origin.strip()]
+
 
 @dataclass(frozen=True)
 class Settings:
@@ -14,16 +40,23 @@ class Settings:
     chroma_collection_name: str
     embedding_model: str
     chat_model: str
+    upload_dir: str
+    memory_dir: str
+    cors_allow_origins: list[str]
 
 
 def get_settings() -> Settings:
+    runtime_root = _default_runtime_data_root()
     return Settings(
         openai_api_key=os.getenv("OPENAI_API_KEY"),
         vector_db=os.getenv("VECTOR_DB", "chroma").strip().lower(),
         pinecone_api_key=os.getenv("PINECONE_API_KEY"),
         pinecone_index_name=os.getenv("PINECONE_INDEX_NAME"),
-        chroma_path=os.getenv("CHROMA_PATH", "data/chroma"),
+        chroma_path=os.getenv("CHROMA_PATH", str(runtime_root / "chroma")),
         chroma_collection_name=os.getenv("CHROMA_COLLECTION_NAME", "studybuddy_chunks"),
         embedding_model=os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small"),
         chat_model=os.getenv("OPENAI_CHAT_MODEL", "gpt-4o-mini"),
+        upload_dir=os.getenv("UPLOAD_DIR", str(runtime_root / "uploads")),
+        memory_dir=os.getenv("MEMORY_DIR", str(_default_memory_root())),
+        cors_allow_origins=_default_cors_origins(),
     )

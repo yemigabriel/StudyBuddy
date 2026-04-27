@@ -1,79 +1,90 @@
 import argparse
-import os
-import shutil
 import subprocess
 from pathlib import Path
-from zipfile import ZIP_DEFLATED, ZipFile
-
-import boto3
 
 ROOT = Path(__file__).parent.resolve()
-BUILD_DIR = ROOT / "build" / "lambda"
-DIST_DIR = ROOT / "dist"
-ZIP_PATH = DIST_DIR / "studybuddy-backend.zip"
+DOCKERFILE_PATH = ROOT / "Dockerfile.lambda"
 
 
 def run(command: list[str]) -> None:
-    env = os.environ.copy()
-    env.setdefault("UV_CACHE_DIR", str(ROOT / ".uv-cache"))
-    subprocess.run(command, cwd=ROOT, env=env, check=True)
+    subprocess.run(command, cwd=ROOT, check=True)
 
 
-def package_lambda() -> Path:
-    if BUILD_DIR.exists():
-        shutil.rmtree(BUILD_DIR)
-    if DIST_DIR.exists():
-        shutil.rmtree(DIST_DIR)
-
-    BUILD_DIR.mkdir(parents=True, exist_ok=True)
-    DIST_DIR.mkdir(parents=True, exist_ok=True)
-
+def build_image(image_uri: str) -> None:
+    print(f"Building Lambda container image: {image_uri}")
     run(
         [
-            "uv",
-            "pip",
-            "install",
-            "--target",
-            str(BUILD_DIR),
-            "-r",
-            "requirements.txt",
+            "docker",
+            "buildx",
+            "build",
+            "--platform",
+            "linux/amd64",
+            "--provenance=false",
+            "--sbom=false",
+            "-f",
+            str(DOCKERFILE_PATH),
+            "-t",
+            image_uri,
+            ".",
         ]
     )
 
-    shutil.copy2(ROOT / "server.py", BUILD_DIR / "server.py")
-    shutil.copytree(ROOT / "app", BUILD_DIR / "app")
 
-    with ZipFile(ZIP_PATH, "w", compression=ZIP_DEFLATED) as archive:
-        for file_path in BUILD_DIR.rglob("*"):
-            if file_path.is_file():
-                archive.write(file_path, file_path.relative_to(BUILD_DIR))
+def login_to_ecr(registry: str) -> None:
+    print(f"Logging in to ECR registry: {registry}")
+    password = subprocess.check_output(
+        ["aws", "ecr", "get-login-password"],
+        text=True,
+    )
+    subprocess.run(
+        ["docker", "login", "--username", "AWS", "--password-stdin", registry],
+        input=password,
+        text=True,
+        check=True,
+    )
 
-    return ZIP_PATH
 
-
-def upload_lambda(zip_path: Path, function_name: str) -> None:
-    client = boto3.client("lambda")
-    client.update_function_code(
-        FunctionName=function_name,
-        ZipFile=zip_path.read_bytes(),
-        Publish=True,
+def push_image(image_uri: str) -> None:
+    registry = image_uri.split("/")[0]
+    login_to_ecr(registry)
+    print(f"Building and pushing Lambda container image: {image_uri}")
+    run(
+        [
+            "docker",
+            "buildx",
+            "build",
+            "--platform",
+            "linux/amd64",
+            "--provenance=false",
+            "--sbom=false",
+            "-f",
+            str(DOCKERFILE_PATH),
+            "-t",
+            image_uri,
+            "--push",
+            ".",
+        ]
     )
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Package and deploy StudyBuddy backend.")
+    parser = argparse.ArgumentParser(description="Build and push StudyBuddy Lambda image.")
     parser.add_argument(
-        "--function-name",
-        help="Lambda function name. If omitted, the script only packages the zip.",
+        "--ecr-uri",
+        required=True,
+        help="Full ECR image URI including tag.",
+    )
+    parser.add_argument(
+        "--skip-push",
+        action="store_true",
+        help="Build the image locally without pushing it to ECR.",
     )
     args = parser.parse_args()
 
-    zip_path = package_lambda()
-    print(f"Created package: {zip_path}")
-
-    if args.function_name:
-        upload_lambda(zip_path, args.function_name)
-        print(f"Uploaded package to Lambda function: {args.function_name}")
+    if not args.skip_push:
+        push_image(args.ecr_uri)
+    else:
+        build_image(args.ecr_uri)
 
 
 if __name__ == "__main__":

@@ -1,0 +1,11 @@
+frontend_bucket_name     = "studybuddy-frontend-capstone"
+memory_bucket_name       = "studybuddy-memory-capstone"
+aws_region               = "eu-west-1"
+project_name             = "studybuddy"
+ecr_repository_name      = "studybuddy-backend"
+lambda_image_tag         = "v2"
+environment              = "dev"
+lambda_timeout           = 60
+api_throttle_burst_limit = 10
+api_throttle_rate_limit  = 5
+vector_db                = "pinecone"
