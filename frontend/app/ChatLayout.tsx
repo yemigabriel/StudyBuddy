@@ -32,7 +32,8 @@ export default function ChatLayout({
         <div>
           <div className="studybuddy-brand">
             <h1>StudyBuddy AI</h1>
-            <p>Deep Learning Mode</p>
+            <p>Your personal study assistant</p>
+            <p></p>
           </div>
         </div>
 

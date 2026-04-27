@@ -33,13 +33,6 @@ export default function InputBar({
             ↑
           </button>
         </div>
-        <div className="studybuddy-input-footer">
-          <div className="studybuddy-input-tools">
-            <span>Attach Material</span>
-            <span>Voice Note</span>
-          </div>
-          <p>StudyBuddy AI can make mistakes. Check important info.</p>
-        </div>
       </form>
     </footer>
   );
