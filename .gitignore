@@ -2,6 +2,8 @@ __pycache__/
 *.pyc
 .venv/
 .uv-cache/
+backend/data/uploads/
+backend/data/index.json
 
 node_modules/
 .next/

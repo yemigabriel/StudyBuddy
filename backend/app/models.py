@@ -9,9 +9,11 @@ class ChatRequest(BaseModel):
 class ChatResponse(BaseModel):
     response: str
     session_id: str
+    context: list[str] = []
 
 
 class UploadResponse(BaseModel):
     filename: str
     content_type: str
     size: int
+    chunks: int
