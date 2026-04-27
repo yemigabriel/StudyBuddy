@@ -29,6 +29,10 @@ jobs:
         working-directory: backend
         run: uv pip install --system -r requirements.txt
 
+      - name: Run backend tests
+        working-directory: backend
+        run: python -m pytest tests -q
+
       - name: Verify backend app
         working-directory: backend
         run: python -c "from server import app; print(app.title)"
