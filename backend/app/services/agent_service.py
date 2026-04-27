@@ -3,7 +3,7 @@ import asyncio
 
 from agents import Agent, Runner
 
-from app.models import QuizPayload
+from app.models import FlashcardsPayload, QuizPayload
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +38,21 @@ Ensure:
 - only one correct answer
 """
 
+FLASHCARD_INSTRUCTIONS = """
+Generate 5-8 flashcards from the content.
+
+Each flashcard should:
+- have a clear question or concept on the front
+- have a concise answer on the back
+
+Return ONLY JSON object:
+{
+  "cards": [
+    { "front": "...", "back": "..." }
+  ]
+}
+"""
+
 
 def _summary_agent() -> Agent:
     return Agent(
@@ -51,6 +66,14 @@ def _quiz_agent() -> Agent:
         name="QuizAgent",
         instructions=QUIZ_INSTRUCTIONS,
         output_type=QuizPayload,
+    )
+
+
+def _flashcard_agent() -> Agent:
+    return Agent(
+        name="FlashcardAgent",
+        instructions=FLASHCARD_INSTRUCTIONS,
+        output_type=FlashcardsPayload,
     )
 
 
@@ -85,3 +108,15 @@ def run_quiz_agent(context: str) -> QuizPayload:
     except Exception:
         logger.exception("Quiz agent failed.")
         return QuizPayload(questions=[])
+
+
+def run_flashcard_agent(context: str) -> FlashcardsPayload:
+    try:
+        result = _run_agent(
+            _flashcard_agent(),
+            f"Context:\n{context}",
+        )
+        return result.final_output
+    except Exception:
+        logger.exception("Flashcard agent failed.")
+        return FlashcardsPayload(cards=[])

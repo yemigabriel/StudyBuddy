@@ -2,138 +2,171 @@
 
 import { useMemo, useState } from "react";
 
-type QuizQuestion = {
-  question: string;
-  options: string[];
-  answer: string;
-};
-
-type QuizData = {
-  questions: QuizQuestion[];
-};
+import { QuizPayload } from "./types";
 
 type QuizModalProps = {
-  quizData: QuizData;
+  quizData: QuizPayload;
   onClose: () => void;
 };
 
 export default function QuizModal({ quizData, onClose }: QuizModalProps) {
+  const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState<Record<number, string>>({});
-  const [score, setScore] = useState<number | null>(null);
   const [showResults, setShowResults] = useState(false);
 
   const totalQuestions = quizData.questions.length;
-  const correctAnswers = useMemo(
+  const question = quizData.questions[currentIndex];
+  const score = useMemo(
     () =>
-      quizData.questions.reduce((count, question, index) => {
-        return count + (selectedAnswers[index] === question.answer ? 1 : 0);
+      quizData.questions.reduce((count, item, index) => {
+        return count + (selectedAnswers[index] === item.answer ? 1 : 0);
       }, 0),
     [quizData.questions, selectedAnswers],
   );
 
-  function handleSubmit() {
-    setScore(correctAnswers);
-    setShowResults(true);
+  function handleNext() {
+    setCurrentIndex((current) => Math.min(current + 1, totalQuestions - 1));
+  }
+
+  function handlePrevious() {
+    setCurrentIndex((current) => Math.max(current - 1, 0));
   }
 
   function handleRetry() {
+    setCurrentIndex(0);
     setSelectedAnswers({});
-    setScore(null);
     setShowResults(false);
   }
 
+  if (!question) {
+    return null;
+  }
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4">
-      <div className="max-h-[85vh] w-full max-w-3xl overflow-y-auto rounded-xl bg-white p-6 shadow-xl">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h3 className="text-2xl font-semibold text-slate-900">Generated Quiz</h3>
-            <p className="mt-1 text-sm text-slate-600">
-              Answer the questions below and submit when you are ready.
-            </p>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-4">
+      <div className="w-full max-w-3xl rounded-[28px] bg-white p-6 shadow-[0_30px_80px_rgba(58,61,149,0.22)]">
+        <div className="flex items-center justify-between gap-4">
+          <div className="text-xs font-semibold uppercase tracking-[0.22em] text-[#7d7ef7]">
+            Question {currentIndex + 1} of {totalQuestions}
           </div>
           <button
-            className="rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+            className="rounded-full p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
             onClick={onClose}
             type="button"
           >
-            Close
+            ✕
           </button>
         </div>
 
-        <div className="mt-6 space-y-6">
-          {quizData.questions.map((question, questionIndex) => (
-            <div
-              key={`${question.question}-${questionIndex}`}
-              className="rounded-lg border border-slate-200 p-4"
-            >
-              <p className="font-medium text-slate-900">
-                {questionIndex + 1}. {question.question}
-              </p>
-              <div className="mt-4 space-y-2">
-                {question.options.map((option) => {
-                  const isSelected = selectedAnswers[questionIndex] === option;
-                  const isCorrect = option === question.answer;
-                  const isWrongSelection = showResults && isSelected && !isCorrect;
-                  const isCorrectHighlight = showResults && isCorrect;
-
-                  return (
-                    <label
-                      key={`${questionIndex}-${option}`}
-                      className={`flex cursor-pointer items-center gap-3 rounded-md border px-3 py-2 text-sm ${
-                        isCorrectHighlight
-                          ? "border-emerald-300 bg-emerald-50 text-emerald-800"
-                          : isWrongSelection
-                            ? "border-rose-300 bg-rose-50 text-rose-800"
-                            : "border-slate-200 text-slate-700 hover:bg-slate-50"
-                      }`}
-                    >
-                      <input
-                        checked={isSelected}
-                        className="h-4 w-4"
-                        disabled={showResults}
-                        name={`question-${questionIndex}`}
-                        onChange={() =>
-                          setSelectedAnswers((current) => ({
-                            ...current,
-                            [questionIndex]: option,
-                          }))
-                        }
-                        type="radio"
-                        value={option}
-                      />
-                      <span>{option}</span>
-                    </label>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
+        <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-slate-200">
+          <div
+            className="h-full rounded-full bg-[#4b4cf3]"
+            style={{ width: `${((currentIndex + 1) / totalQuestions) * 100}%` }}
+          />
         </div>
 
-        <div className="mt-6 flex flex-wrap items-center gap-3">
+        <div className="mt-12">
+          <h3 className="max-w-2xl text-2xl font-semibold leading-snug text-slate-900">
+            {question.question}
+          </h3>
+          <div className="mt-4 h-1 w-16 rounded-full bg-[#4b4cf3]" />
+        </div>
+
+        <div className="mt-10 space-y-4">
+          {question.options.map((option, optionIndex) => {
+            const key = String.fromCharCode(65 + optionIndex);
+            const isSelected = selectedAnswers[currentIndex] === option;
+            const isCorrect = option === question.answer;
+            const isWrongSelection = showResults && isSelected && !isCorrect;
+            const isCorrectHighlight = showResults && isCorrect;
+
+            return (
+              <label
+                key={`${currentIndex}-${option}`}
+                className={`flex cursor-pointer items-center gap-4 rounded-2xl border px-5 py-4 transition ${
+                  isCorrectHighlight
+                    ? "border-[#4b4cf3] bg-[#eef0ff]"
+                    : isWrongSelection
+                      ? "border-rose-300 bg-rose-50"
+                      : isSelected
+                        ? "border-[#4b4cf3] bg-white shadow-[0_12px_22px_rgba(75,76,243,0.12)]"
+                        : "border-slate-200 bg-slate-50/70 hover:bg-white"
+                }`}
+              >
+                <span
+                  className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-sm font-semibold ${
+                    isSelected || isCorrectHighlight
+                      ? "bg-[#4b4cf3] text-white"
+                      : "bg-white text-slate-500"
+                  }`}
+                >
+                  {key}
+                </span>
+                <input
+                  checked={isSelected}
+                  className="hidden"
+                  disabled={showResults}
+                  name={`question-${currentIndex}`}
+                  onChange={() =>
+                    setSelectedAnswers((current) => ({
+                      ...current,
+                      [currentIndex]: option,
+                    }))
+                  }
+                  type="radio"
+                  value={option}
+                />
+                <span className="text-sm font-medium text-slate-700">{option}</span>
+                {isSelected ? (
+                  <span className="ml-auto text-[#4b4cf3]">●</span>
+                ) : null}
+              </label>
+            );
+          })}
+        </div>
+
+        <div className="mt-10 flex items-center justify-between gap-3">
           <button
-            className="rounded-md bg-slate-900 px-5 py-3 text-white disabled:opacity-60"
-            disabled={showResults || totalQuestions === 0}
-            onClick={handleSubmit}
+            className="rounded-full px-4 py-3 text-sm font-medium text-slate-500 transition hover:bg-slate-50 disabled:opacity-40"
+            disabled={currentIndex === 0}
+            onClick={handlePrevious}
             type="button"
           >
-            Submit Quiz
+            ← Previous
           </button>
-          {showResults ? (
+
+          <div className="flex items-center gap-3">
+            {showResults ? (
+              <p className="text-sm font-semibold text-slate-700">
+                Score: {score}/{totalQuestions}
+              </p>
+            ) : null}
+            {showResults ? (
+              <button
+                className="rounded-full border border-slate-200 px-5 py-3 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
+                onClick={handleRetry}
+                type="button"
+              >
+                Retry
+              </button>
+            ) : (
+              <button
+                className="rounded-full border border-slate-200 px-5 py-3 text-sm font-medium text-slate-500 transition hover:bg-slate-50"
+                onClick={() => setShowResults(true)}
+                type="button"
+              >
+                Submit Quiz
+              </button>
+            )}
             <button
-              className="rounded-md border border-slate-300 px-5 py-3 text-slate-700 hover:bg-slate-50"
-              onClick={handleRetry}
+              className="rounded-full bg-[#4b4cf3] px-6 py-3 text-sm font-semibold text-white shadow-[0_14px_26px_rgba(75,76,243,0.28)] disabled:opacity-40"
+              disabled={currentIndex === totalQuestions - 1}
+              onClick={handleNext}
               type="button"
             >
-              Retry
+              Next Question →
             </button>
-          ) : null}
-          {score !== null ? (
-            <p className="text-sm font-medium text-slate-700">
-              Score: {score}/{totalQuestions}
-            </p>
-          ) : null}
+          </div>
         </div>
       </div>
     </div>

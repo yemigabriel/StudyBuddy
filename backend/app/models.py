@@ -11,6 +11,15 @@ class QuizPayload(BaseModel):
     questions: list[QuizQuestion]
 
 
+class FlashcardItem(BaseModel):
+    front: str
+    back: str
+
+
+class FlashcardsPayload(BaseModel):
+    cards: list[FlashcardItem]
+
+
 class ChatRequest(BaseModel):
     message: str = Field(min_length=1)
     session_id: str = Field(min_length=1)
@@ -28,6 +37,7 @@ class ChatResponse(BaseModel):
     document_name: str | None = None
     mode: str = "qa"
     quiz: QuizPayload | None = None
+    flashcards: FlashcardsPayload | None = None
 
 
 class UploadResponse(BaseModel):

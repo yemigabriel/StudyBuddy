@@ -101,6 +101,13 @@ def chat_stream(request: ChatRequest) -> StreamingResponse:
                         "questions": [question.model_dump() for question in response.quiz.questions],
                     },
                 )
+            if response.flashcards is not None:
+                yield _sse_event(
+                    "flashcards",
+                    {
+                        "cards": [card.model_dump() for card in response.flashcards.cards],
+                    },
+                )
             yield _sse_event(
                 "done",
                 {

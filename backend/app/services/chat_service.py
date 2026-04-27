@@ -1,7 +1,11 @@
 from collections.abc import Iterator
 
-from app.models import ChatRequest, ChatResponse, QuizPayload
-from app.services.agent_service import run_quiz_agent, run_summary_agent
+from app.models import ChatRequest, ChatResponse, FlashcardsPayload, QuizPayload
+from app.services.agent_service import (
+    run_flashcard_agent,
+    run_quiz_agent,
+    run_summary_agent,
+)
 from app.services.llm_service import generate_response, rewrite_query, stream_response
 from app.services.retriever_service import build_context, retrieve_context
 
@@ -32,12 +36,16 @@ def generate_chat_response(
     )
     response = ""
     quiz: QuizPayload | None = None
+    flashcards: FlashcardsPayload | None = None
 
     if request.mode == "summary":
         response = run_summary_agent(context)
     elif request.mode == "quiz":
         quiz = run_quiz_agent(context)
         response = "Quiz generated successfully."
+    elif request.mode == "flashcards":
+        flashcards = run_flashcard_agent(context)
+        response = "Flashcards generated successfully."
     else:
         response = generate_response(
             context,
@@ -52,6 +60,7 @@ def generate_chat_response(
         document_name=document_name,
         mode=request.mode,
         quiz=quiz,
+        flashcards=flashcards,
     )
 
 
