@@ -96,7 +96,7 @@ Run tests:
 
 ```bash
 cd backend
-UV_CACHE_DIR=.uv-cache uv run pytest tests -q
+uv run pytest tests -q
 ```
 
 ### Frontend
