@@ -51,7 +51,8 @@ export default function Home() {
   }, []);
 
   async function handleUpload(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.currentTarget.files?.[0];
+    const input = event.currentTarget;
+    const file = input.files?.[0];
     if (!file || !sessionId) {
       return;
     }
@@ -91,7 +92,9 @@ export default function Home() {
       setUploadError(message);
     } finally {
       setIsUploading(false);
-      event.currentTarget.value = "";
+      if (input) {
+        input.value = "";
+      }
     }
   }
 

@@ -1,4 +1,6 @@
 import { ChatResponse, Message } from "./types";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 type MessageListProps = {
   messages: Message[];
@@ -48,6 +50,12 @@ export default function MessageList({
                 <span />
                 <span />
                 <span />
+              </div>
+            ) : message.role === "assistant" ? (
+              <div className="studybuddy-markdown">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  {message.content}
+                </ReactMarkdown>
               </div>
             ) : (
               <p className="whitespace-pre-wrap">{message.content}</p>
