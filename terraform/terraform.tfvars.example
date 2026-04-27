@@ -1,0 +1,3 @@
+frontend_bucket_name = "studybuddy-frontend-example"
+memory_bucket_name   = "studybuddy-memory-example"
+aws_region           = "us-east-1"
