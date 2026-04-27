@@ -1,10 +1,21 @@
 from pydantic import BaseModel, Field
 
 
+class QuizQuestion(BaseModel):
+    question: str
+    options: list[str]
+    answer: str
+
+
+class QuizPayload(BaseModel):
+    questions: list[QuizQuestion]
+
+
 class ChatRequest(BaseModel):
     message: str = Field(min_length=1)
     session_id: str = Field(min_length=1)
     document_name: str | None = None
+    mode: str = "qa"
 
 
 class ChatResponse(BaseModel):
@@ -15,6 +26,8 @@ class ChatResponse(BaseModel):
     message: str | None = None
     options: list[str] = []
     document_name: str | None = None
+    mode: str = "qa"
+    quiz: QuizPayload | None = None
 
 
 class UploadResponse(BaseModel):

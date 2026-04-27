@@ -2,6 +2,20 @@
 
 import { FormEvent, useEffect, useState } from "react";
 
+import QuizModal from "./QuizModal";
+
+type ChatMode = "qa" | "summary" | "quiz";
+
+type QuizQuestion = {
+  question: string;
+  options: string[];
+  answer: string;
+};
+
+type QuizPayload = {
+  questions: QuizQuestion[];
+};
+
 type ChatResponse = {
   response: string;
   session_id: string;
@@ -10,6 +24,8 @@ type ChatResponse = {
   message?: string | null;
   options: string[];
   document_name?: string | null;
+  mode: ChatMode;
+  quiz?: QuizPayload | null;
 };
 
 type UploadResponse = {
@@ -34,6 +50,8 @@ type StreamEventPayload = {
   message?: string | null;
   options?: string[];
   document_name?: string | null;
+  mode?: ChatMode;
+  questions?: QuizQuestion[];
 };
 
 const API_BASE_URL =
@@ -44,8 +62,11 @@ export default function Home() {
   const [question, setQuestion] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [pendingQuery, setPendingQuery] = useState("");
+  const [pendingMode, setPendingMode] = useState<ChatMode>("qa");
   const [disambiguation, setDisambiguation] = useState<ChatResponse | null>(null);
   const [uploads, setUploads] = useState<UploadResponse[]>([]);
+  const [quizData, setQuizData] = useState<QuizPayload | null>(null);
+  const [showQuizModal, setShowQuizModal] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
 
@@ -87,6 +108,7 @@ export default function Home() {
 
   async function sendQuestion(
     message: string,
+    mode: ChatMode = "qa",
     documentName?: string,
     appendUserMessage: boolean = true,
   ) {
@@ -108,6 +130,7 @@ export default function Home() {
           message,
           session_id: sessionId,
           document_name: documentName,
+          mode,
         }),
       });
       if (!response.ok || !response.body) {
@@ -143,6 +166,7 @@ export default function Home() {
           if (parsed.event === "disambiguation") {
             const payload = parsed.payload;
             setPendingQuery(message);
+            setPendingMode(mode);
             setDisambiguation({
               response: "",
               session_id: payload.session_id ?? sessionId,
@@ -151,6 +175,7 @@ export default function Home() {
               message: payload.message ?? "Which document are you referring to?",
               options: payload.options ?? [],
               document_name: payload.document_name ?? null,
+              mode,
             });
             setMessages((current) => {
               const next = [...current];
@@ -161,6 +186,13 @@ export default function Home() {
               return next;
             });
             return;
+          }
+
+          if (parsed.event === "quiz") {
+            if (parsed.payload.questions?.length) {
+              setQuizData({ questions: parsed.payload.questions });
+              setShowQuizModal(true);
+            }
           }
 
           if (parsed.event === "chunk") {
@@ -177,6 +209,27 @@ export default function Home() {
 
           if (parsed.event === "done") {
             setPendingQuery("");
+            if (mode === "summary" && parsed.payload.response) {
+              setMessages((current) => {
+                const next = [...current];
+                next[assistantIndex] = {
+                  role: "assistant",
+                  content: parsed.payload.response ?? "",
+                };
+                return next;
+              });
+            }
+
+            if (mode === "quiz") {
+              setMessages((current) => {
+                const next = [...current];
+                next[assistantIndex] = {
+                  role: "assistant",
+                  content: parsed.payload.response ?? "Quiz generated successfully.",
+                };
+                return next;
+              });
+            }
           }
         }
       }
@@ -200,7 +253,19 @@ export default function Home() {
       return;
     }
     setQuestion("");
-    await sendQuestion(message);
+    await sendQuestion(message, "qa");
+  }
+
+  async function handleSummarize() {
+    const message = question.trim() || "Summarize this document.";
+    setQuestion("");
+    await sendQuestion(message, "summary");
+  }
+
+  async function handleGenerateQuiz() {
+    const message = question.trim() || "Generate a quiz for this document.";
+    setQuestion("");
+    await sendQuestion(message, "quiz");
   }
 
   return (
@@ -266,7 +331,7 @@ export default function Home() {
                   <button
                     key={option}
                     className="rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
-                    onClick={() => void sendQuestion(pendingQuery, option, false)}
+                    onClick={() => void sendQuestion(pendingQuery, pendingMode, option, false)}
                     type="button"
                   >
                     {option}
@@ -293,7 +358,31 @@ export default function Home() {
             {isSending ? "Sending..." : "Send"}
           </button>
         </form>
+        <div className="mt-3 flex flex-wrap gap-3">
+          <button
+            className="rounded-md border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+            disabled={isSending || !sessionId}
+            onClick={() => void handleSummarize()}
+            type="button"
+          >
+            Summarize Document
+          </button>
+          <button
+            className="rounded-md border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+            disabled={isSending || !sessionId}
+            onClick={() => void handleGenerateQuiz()}
+            type="button"
+          >
+            Generate Quiz
+          </button>
+        </div>
       </section>
+      {showQuizModal && quizData ? (
+        <QuizModal
+          onClose={() => setShowQuizModal(false)}
+          quizData={quizData}
+        />
+      ) : null}
     </main>
   );
 }

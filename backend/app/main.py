@@ -76,6 +76,43 @@ def chat_stream(request: ChatRequest) -> StreamingResponse:
 
         return StreamingResponse(disambiguation_stream(), media_type="text/event-stream")
 
+    if request.mode != "qa":
+        response = generate_chat_response(
+            request,
+            history=history,
+            document_name=resolved_document_name,
+        )
+        append_conversation(request.session_id, request.message, response.response)
+
+        def mode_stream() -> str:
+            yield _sse_event(
+                "metadata",
+                {
+                    "session_id": request.session_id,
+                    "context": response.context,
+                    "document_name": resolved_document_name,
+                    "mode": request.mode,
+                },
+            )
+            if response.quiz is not None:
+                yield _sse_event(
+                    "quiz",
+                    {
+                        "questions": [question.model_dump() for question in response.quiz.questions],
+                    },
+                )
+            yield _sse_event(
+                "done",
+                {
+                    "response": response.response,
+                    "session_id": request.session_id,
+                    "document_name": resolved_document_name,
+                    "mode": request.mode,
+                },
+            )
+
+        return StreamingResponse(mode_stream(), media_type="text/event-stream")
+
     chunks, token_stream = generate_chat_stream(
         request,
         history=history,
@@ -90,6 +127,7 @@ def chat_stream(request: ChatRequest) -> StreamingResponse:
                 "session_id": request.session_id,
                 "context": chunks,
                 "document_name": resolved_document_name,
+                "mode": request.mode,
             },
         )
         for token in token_stream:
@@ -102,6 +140,7 @@ def chat_stream(request: ChatRequest) -> StreamingResponse:
                 "response": full_response,
                 "session_id": request.session_id,
                 "document_name": resolved_document_name,
+                "mode": request.mode,
             },
         )
 
