@@ -4,6 +4,7 @@ __pycache__/
 .uv-cache/
 backend/data/uploads/
 backend/data/index.json
+memory/sessions/
 
 node_modules/
 .next/
