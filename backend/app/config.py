@@ -11,14 +11,18 @@ def _is_lambda_runtime() -> bool:
     return bool(os.getenv("AWS_LAMBDA_FUNCTION_NAME") or os.getenv("LAMBDA_TASK_ROOT"))
 
 
+def _is_cloud_run_runtime() -> bool:
+    return bool(os.getenv("K_SERVICE"))
+
+
 def _default_runtime_data_root() -> Path:
-    if _is_lambda_runtime():
+    if _is_lambda_runtime() or _is_cloud_run_runtime():
         return Path("/tmp/studybuddy")
     return Path("data")
 
 
 def _default_memory_root() -> Path:
-    if _is_lambda_runtime():
+    if _is_lambda_runtime() or _is_cloud_run_runtime():
         return Path("/tmp/studybuddy/memory/sessions")
     return Path("../memory/sessions")
 
@@ -36,6 +40,8 @@ class Settings:
     vector_db: str
     pinecone_api_key: str | None
     pinecone_index_name: str | None
+    memory_backend: str
+    memory_bucket: str | None
     chroma_path: str
     chroma_collection_name: str
     embedding_model: str
@@ -52,6 +58,8 @@ def get_settings() -> Settings:
         vector_db=os.getenv("VECTOR_DB", "chroma").strip().lower(),
         pinecone_api_key=os.getenv("PINECONE_API_KEY"),
         pinecone_index_name=os.getenv("PINECONE_INDEX_NAME"),
+        memory_backend=os.getenv("MEMORY_BACKEND", "local").strip().lower(),
+        memory_bucket=os.getenv("STUDYBUDDY_MEMORY_BUCKET"),
         chroma_path=os.getenv("CHROMA_PATH", str(runtime_root / "chroma")),
         chroma_collection_name=os.getenv("CHROMA_COLLECTION_NAME", "studybuddy_chunks"),
         embedding_model=os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small"),

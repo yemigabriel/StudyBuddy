@@ -1,14 +1,16 @@
 import json
-import os
 from datetime import datetime, timezone
 from pathlib import Path
 
 import boto3
 from botocore.exceptions import BotoCoreError, ClientError
+from google.cloud import storage
+from google.cloud.exceptions import GoogleCloudError
 
 from app.config import get_settings
 
-MEMORY_DIR = Path(get_settings().memory_dir)
+SETTINGS = get_settings()
+MEMORY_DIR = Path(SETTINGS.memory_dir)
 
 
 def _session_path(session_id: str) -> Path:
@@ -16,16 +18,24 @@ def _session_path(session_id: str) -> Path:
     return MEMORY_DIR / f"{session_id}.json"
 
 
-def _s3_bucket() -> str | None:
-    return os.getenv("STUDYBUDDY_MEMORY_BUCKET")
+def _memory_backend() -> str:
+    return SETTINGS.memory_backend
 
 
-def _s3_key(session_id: str) -> str:
+def _memory_bucket() -> str | None:
+    return SETTINGS.memory_bucket
+
+
+def _memory_key(session_id: str) -> str:
     return f"sessions/{session_id}.json"
 
 
-def _client():
+def _s3_client():
     return boto3.client("s3")
+
+
+def _gcs_client():
+    return storage.Client()
 
 
 def _default_state() -> dict:
@@ -57,16 +67,18 @@ def get_session_state(session_id: str) -> dict:
     if path.exists():
         return _normalize_state(json.loads(path.read_text(encoding="utf-8")))
 
-    bucket = _s3_bucket()
+    bucket = _memory_bucket()
     if not bucket:
         return _default_state()
 
+    payload = _download_remote_state(session_id)
+    if payload is None:
+        return _default_state()
+
     try:
-        response = _client().get_object(Bucket=bucket, Key=_s3_key(session_id))
-        payload = response["Body"].read().decode("utf-8")
         path.write_text(payload, encoding="utf-8")
         return _normalize_state(json.loads(payload))
-    except (ClientError, BotoCoreError, json.JSONDecodeError):
+    except json.JSONDecodeError:
         return _default_state()
 
 
@@ -130,16 +142,51 @@ def _write_state(session_id: str, state: dict) -> None:
     path = _session_path(session_id)
     serialized = json.dumps(state, indent=2)
     path.write_text(serialized, encoding="utf-8")
-    _upload_to_s3(session_id, path)
+    _upload_remote_state(session_id, path)
 
 
-def _upload_to_s3(session_id: str, path: Path) -> None:
-    bucket = _s3_bucket()
+def _download_remote_state(session_id: str) -> str | None:
+    bucket = _memory_bucket()
     if not bucket:
         return
 
+    backend = _memory_backend()
+
+    if backend == "s3":
+        try:
+            response = _s3_client().get_object(Bucket=bucket, Key=_memory_key(session_id))
+            return response["Body"].read().decode("utf-8")
+        except (ClientError, BotoCoreError):
+            return None
+
+    if backend == "gcs":
+        try:
+            blob = _gcs_client().bucket(bucket).blob(_memory_key(session_id))
+            if not blob.exists():
+                return None
+            return blob.download_as_text()
+        except GoogleCloudError:
+            return None
+
+    return None
+
+
+def _upload_remote_state(session_id: str, path: Path) -> None:
+    bucket = _memory_bucket()
+    if not bucket:
+        return
+
+    backend = _memory_backend()
+
     try:
-        _client().upload_file(str(path), bucket, _s3_key(session_id))
-    except (ClientError, BotoCoreError):
+        if backend == "s3":
+            _s3_client().upload_file(str(path), bucket, _memory_key(session_id))
+            return
+
+        if backend == "gcs":
+            blob = _gcs_client().bucket(bucket).blob(_memory_key(session_id))
+            blob.upload_from_filename(str(path))
+            return
+    except (ClientError, BotoCoreError, GoogleCloudError):
         # TODO: add structured logging and retry support for production use.
         return
