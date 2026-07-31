@@ -21,6 +21,32 @@ import {
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
 
+function createSessionId() {
+  if (
+    typeof globalThis.crypto !== "undefined" &&
+    typeof globalThis.crypto.randomUUID === "function"
+  ) {
+    return globalThis.crypto.randomUUID();
+  }
+
+  return `session-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function ensureBrowserSessionId(currentSessionId: string) {
+  if (currentSessionId) {
+    return currentSessionId;
+  }
+
+  const storedSessionId = window.sessionStorage.getItem("studybuddy-session-id");
+  if (storedSessionId) {
+    return storedSessionId;
+  }
+
+  const nextSessionId = createSessionId();
+  window.sessionStorage.setItem("studybuddy-session-id", nextSessionId);
+  return nextSessionId;
+}
+
 export default function Home() {
   const [sessionId, setSessionId] = useState("");
   const [question, setQuestion] = useState("");
@@ -45,7 +71,7 @@ export default function Home() {
       return;
     }
 
-    const nextSessionId = crypto.randomUUID();
+    const nextSessionId = createSessionId();
     window.sessionStorage.setItem("studybuddy-session-id", nextSessionId);
     setSessionId(nextSessionId);
   }, []);
@@ -53,14 +79,19 @@ export default function Home() {
   async function handleUpload(event: ChangeEvent<HTMLInputElement>) {
     const input = event.currentTarget;
     const file = input.files?.[0];
-    if (!file || !sessionId) {
+    if (!file) {
       return;
+    }
+
+    const effectiveSessionId = ensureBrowserSessionId(sessionId);
+    if (!sessionId) {
+      setSessionId(effectiveSessionId);
     }
 
     setIsUploading(true);
     setUploadError("");
     const formData = new FormData();
-    formData.append("session_id", sessionId);
+    formData.append("session_id", effectiveSessionId);
     formData.append("file", file);
 
     try {
@@ -258,10 +289,24 @@ export default function Home() {
     await sendQuestion(message, mode);
   }
 
-  const activeSessionLabel = uploads[uploads.length - 1]?.document_name ?? "Cognitive Psychology";
+  const activeSessionLabel = uploads[uploads.length - 1]?.document_name ?? "Study Session";
 
   return (
     <>
+      {isUploading ? (
+        <div className="studybuddy-upload-overlay" aria-live="polite" aria-busy="true">
+          <div className="studybuddy-upload-overlay-card">
+            <div className="studybuddy-upload-overlay-line" />
+            <p className="studybuddy-upload-overlay-eyebrow">Upload in progress</p>
+            <h2>Preparing your document...</h2>
+            <p>
+              StudyBuddy is preparing it for chat,
+              summaries, quizzes, and flashcards.
+            </p>
+          </div>
+        </div>
+      ) : null}
+
       {!hasActiveDocument ? (
         <UploadScreen
           isUploading={isUploading}

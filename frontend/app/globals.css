@@ -241,6 +241,78 @@ body {
   font-weight: 500;
 }
 
+.studybuddy-upload-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: rgba(20, 25, 48, 0.34);
+  backdrop-filter: blur(10px);
+}
+
+.studybuddy-upload-overlay-card {
+  width: min(100%, 34rem);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.94);
+  padding: 1.6rem 1.6rem 1.4rem;
+  box-shadow: 0 28px 70px rgba(28, 33, 84, 0.2);
+}
+
+.studybuddy-upload-overlay-line {
+  position: relative;
+  height: 0.45rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(88, 89, 247, 0.12);
+}
+
+.studybuddy-upload-overlay-line::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: 42%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #5859f7 0%, #4344db 100%);
+  animation: studybuddy-loader-slide 1.15s ease-in-out infinite;
+}
+
+.studybuddy-upload-overlay-eyebrow {
+  margin-top: 1rem;
+  color: #5859f7;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+.studybuddy-upload-overlay-card h2 {
+  margin-top: 0.7rem;
+  color: #1d2438;
+  font-size: clamp(1.7rem, 4vw, 2.3rem);
+  font-weight: 800;
+  letter-spacing: -0.05em;
+}
+
+.studybuddy-upload-overlay-card p:last-child {
+  margin-top: 0.8rem;
+  color: #69758f;
+  font-size: 1rem;
+  line-height: 1.7;
+}
+
+@keyframes studybuddy-loader-slide {
+  0% {
+    transform: translateX(-110%);
+  }
+  100% {
+    transform: translateX(250%);
+  }
+}
+
 .studybuddy-main {
   display: flex;
   min-width: 0;

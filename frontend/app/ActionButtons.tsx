@@ -5,10 +5,10 @@ type ActionButtonsProps = {
   onAction: (mode: ChatMode) => void;
 };
 
-const ACTIONS: Array<{ mode: ChatMode; label: string; variant: "primary" | "secondary" }> = [
-  { mode: "summary", label: "Summarize Document", variant: "primary" },
-  { mode: "quiz", label: "Generate Quiz", variant: "secondary" },
-  { mode: "flashcards", label: "Generate Flashcards", variant: "secondary" },
+const ACTIONS: Array<{ mode: ChatMode; label: string }> = [
+  { mode: "summary", label: "Summarize Document" },
+  { mode: "quiz", label: "Generate Quiz" },
+  { mode: "flashcards", label: "Generate Flashcards" },
 ];
 
 export default function ActionButtons({ disabled, onAction }: ActionButtonsProps) {
@@ -17,7 +17,7 @@ export default function ActionButtons({ disabled, onAction }: ActionButtonsProps
       {ACTIONS.map((action) => (
         <button
           key={action.mode}
-          className={`studybuddy-action ${action.variant === "primary" ? "studybuddy-action-primary" : "studybuddy-action-secondary"}`}
+          className="studybuddy-action studybuddy-action-secondary"
           disabled={disabled}
           onClick={() => onAction(action.mode)}
           type="button"

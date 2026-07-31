@@ -50,11 +50,13 @@ export default function QuizModal({ quizData, onClose }: QuizModalProps) {
             Question {currentIndex + 1} of {totalQuestions}
           </div>
           <button
-            className="rounded-full p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+            aria-label="Close quiz"
+            className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
             onClick={onClose}
             type="button"
           >
-            ✕
+            <span aria-hidden="true">✕</span>
+            <span>Close</span>
           </button>
         </div>
 
@@ -158,6 +160,13 @@ export default function QuizModal({ quizData, onClose }: QuizModalProps) {
                 Submit Quiz
               </button>
             )}
+            <button
+              className="rounded-full border border-slate-200 px-5 py-3 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
+              onClick={onClose}
+              type="button"
+            >
+              Exit Quiz
+            </button>
             <button
               className="rounded-full bg-[#4b4cf3] px-6 py-3 text-sm font-semibold text-white shadow-[0_14px_26px_rgba(75,76,243,0.28)] disabled:opacity-40"
               disabled={currentIndex === totalQuestions - 1}

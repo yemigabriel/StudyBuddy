@@ -19,8 +19,7 @@ export default function UploadScreen({
           Transform notes into <span>intelligence.</span>
         </h1>
         <p>
-          Upload your study materials and let AI generate personalized summaries,
-          quizzes, flashcards, and explanations.
+          Learn faster. Upload your study materials to chat, and generate quizzes, flashcards, and summaries.
         </p>
       </div>
 
@@ -30,7 +29,7 @@ export default function UploadScreen({
           <h2>Upload Document</h2>
           <span className="studybuddy-upload-copy">
             {isUploading
-              ? "Uploading and indexing your document..."
+              ? "Uploading and preparing your document..."
               : "Drop your PDF, DOCX or TXT files here to start."}
           </span>
           <span className="studybuddy-upload-button">Browse Files</span>

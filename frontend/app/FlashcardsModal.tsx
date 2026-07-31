@@ -45,11 +45,13 @@ export default function FlashcardsModal({
             <span>Study Flashcards</span>
           </div>
           <button
-            className="rounded-full p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+            aria-label="Close flashcards"
+            className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
             onClick={onClose}
             type="button"
           >
-            ✕
+            <span aria-hidden="true">✕</span>
+            <span>Close</span>
           </button>
         </div>
 
@@ -112,14 +114,23 @@ export default function FlashcardsModal({
           >
             Previous
           </button>
-          <button
-            className="rounded-full bg-[#4b4cf3] px-5 py-3 text-sm font-semibold text-white transition disabled:opacity-40"
-            disabled={currentIndex === totalCards - 1}
-            onClick={goToNext}
-            type="button"
-          >
-            Next
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              className="rounded-full border border-slate-200 px-5 py-3 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
+              onClick={onClose}
+              type="button"
+            >
+              Exit Flashcards
+            </button>
+            <button
+              className="rounded-full bg-[#4b4cf3] px-5 py-3 text-sm font-semibold text-white transition disabled:opacity-40"
+              disabled={currentIndex === totalCards - 1}
+              onClick={goToNext}
+              type="button"
+            >
+              Next
+            </button>
+          </div>
         </div>
       </div>
       </div>
