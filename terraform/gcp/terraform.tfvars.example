@@ -1,0 +1,8 @@
+project_id                     = "my-gcp-project"
+region                         = "us-central1"
+environment                    = "dev"
+frontend_bucket_name           = "studybuddy-frontend-example"
+memory_bucket_name             = "studybuddy-memory-example"
+artifact_registry_repository_id = "studybuddy-backend"
+cloud_run_service_name         = "studybuddy-backend"
+backend_image_tag              = "latest"

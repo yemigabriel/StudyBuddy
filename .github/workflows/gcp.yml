@@ -1,0 +1,110 @@
+name: GCP Deploy
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - "feature/gcp-migration"
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: uv pip install --system -r requirements.txt
+
+      - name: Run backend tests
+        working-directory: backend
+        run: python -m pytest tests -q
+
+      - name: Verify backend app
+        working-directory: backend
+        run: python -c "from server import app; print(app.title)"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: frontend
+        env:
+          NEXT_PUBLIC_API_BASE_URL: http://localhost:8000
+        run: npm run build
+
+      - name: Build backend Cloud Run image locally
+        working-directory: backend
+        run: python3 deploy_gcp.py --image-uri studybuddy-backend:ci --skip-push
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT_EMAIL }}
+
+      - name: Set up gcloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker ${{ secrets.GCP_REGION }}-docker.pkg.dev --quiet
+
+      - name: Push backend image to Artifact Registry
+        working-directory: backend
+        env:
+          GCP_REGION: ${{ secrets.GCP_REGION }}
+          GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+          GCP_ARTIFACT_REPOSITORY: ${{ secrets.GCP_ARTIFACT_REPOSITORY }}
+        run: |
+          python3 deploy_gcp.py --image-uri ${GCP_REGION}-docker.pkg.dev/${GCP_PROJECT_ID}/${GCP_ARTIFACT_REPOSITORY}/studybuddy-backend:latest
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform init
+        working-directory: terraform/gcp
+        env:
+          TF_STATE_BUCKET: ${{ secrets.GCP_TF_STATE_BUCKET }}
+          TF_STATE_PREFIX: ${{ secrets.GCP_TF_STATE_PREFIX }}
+        run: |
+          terraform init \
+            -backend-config="bucket=${TF_STATE_BUCKET}" \
+            -backend-config="prefix=${TF_STATE_PREFIX}"
+
+      - name: Terraform apply
+        working-directory: terraform/gcp
+        env:
+          TF_VAR_project_id: ${{ secrets.GCP_PROJECT_ID }}
+          TF_VAR_region: ${{ secrets.GCP_REGION }}
+          TF_VAR_environment: prod
+          TF_VAR_frontend_bucket_name: ${{ secrets.GCP_FRONTEND_BUCKET }}
+          TF_VAR_memory_bucket_name: ${{ secrets.GCP_MEMORY_BUCKET }}
+          TF_VAR_artifact_registry_repository_id: ${{ secrets.GCP_ARTIFACT_REPOSITORY }}
+          TF_VAR_cloud_run_service_name: studybuddy-backend
+          TF_VAR_backend_image_tag: latest
+          TF_VAR_openai_api_key: ${{ secrets.OPENAI_API_KEY }}
+          TF_VAR_pinecone_api_key: ${{ secrets.PINECONE_API_KEY }}
+          TF_VAR_pinecone_index_name: ${{ secrets.PINECONE_INDEX_NAME }}
+        run: terraform apply -auto-approve

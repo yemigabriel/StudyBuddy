@@ -20,6 +20,7 @@ out/
 .terraform/
 *.tfstate*
 .terraform.lock.hcl
+terraform/gcp/terraform.tfvars
 
 .DS_Store
 .vscode/
