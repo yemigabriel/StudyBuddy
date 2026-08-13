@@ -1,3 +1,4 @@
+import logging
 import os
 from dataclasses import dataclass
 from pathlib import Path
@@ -5,6 +6,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 load_dotenv()
+logger = logging.getLogger(__name__)
 
 
 def _is_lambda_runtime() -> bool:
@@ -28,9 +30,11 @@ def _default_memory_root() -> Path:
 
 
 def _default_cors_origins() -> list[str]:
-    raw = os.getenv("CORS_ALLOW_ORIGINS", "")
-    if not raw.strip():
-        return ["*"]
+    raw = os.getenv("CORS_ALLOW_ORIGINS")
+    if not raw or not raw.strip():
+        logger.warning("CORS_ALLOW_ORIGINS is not set! Defaulting safely to local development origin.")
+        return ["http://localhost:3000"]
+    
     return [origin.strip() for origin in raw.split(",") if origin.strip()]
 
 
