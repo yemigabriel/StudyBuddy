@@ -1,3 +1,4 @@
+import { Show, SignInButton, SignUpButton, UserButton } from "@clerk/nextjs";
 import { ChangeEventHandler } from "react";
 
 type UploadScreenProps = {
@@ -13,6 +14,29 @@ export default function UploadScreen({
 }: UploadScreenProps) {
   return (
     <main className="studybuddy-upload-screen">
+      <div className="studybuddy-auth-bar">
+        <Show when="signed-out">
+          <div className="studybuddy-auth-actions">
+            <SignInButton mode="modal">
+              <button className="studybuddy-auth-button studybuddy-auth-button-secondary" type="button">
+                Sign In
+              </button>
+            </SignInButton>
+            <SignUpButton mode="modal">
+              <button className="studybuddy-auth-button studybuddy-auth-button-primary" type="button">
+                Sign Up
+              </button>
+            </SignUpButton>
+          </div>
+        </Show>
+        <Show when="signed-in">
+          <div className="studybuddy-auth-user">
+            <span>Signed in</span>
+            <UserButton afterSignOutUrl="/" />
+          </div>
+        </Show>
+      </div>
+
       <div className="studybuddy-upload-hero">
         <div className="studybuddy-empty-badge">StudyBuddy</div>
         <h1>

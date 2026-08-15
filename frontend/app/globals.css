@@ -29,6 +29,59 @@ body {
     sans-serif;
 }
 
+.studybuddy-auth-bar {
+  display: flex;
+  width: min(100%, 58rem);
+  justify-content: flex-end;
+}
+
+.studybuddy-auth-shell {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.studybuddy-auth-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.studybuddy-auth-user {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: #6e758b;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.studybuddy-auth-button {
+  border-radius: 999px;
+  padding: 0.78rem 1.15rem;
+  font-size: 0.92rem;
+  font-weight: 700;
+  transition: transform 140ms ease, box-shadow 140ms ease, background 140ms ease;
+}
+
+.studybuddy-auth-button:hover {
+  transform: translateY(-1px);
+}
+
+.studybuddy-auth-button-primary {
+  background: linear-gradient(135deg, #5859f7 0%, #4344db 100%);
+  color: #fff;
+  box-shadow: 0 14px 28px rgba(75, 76, 243, 0.2);
+}
+
+.studybuddy-auth-button-secondary {
+  border: 1px solid rgba(75, 76, 243, 0.18);
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--studybuddy-primary);
+}
+
 .studybuddy-shell {
   display: grid;
   min-height: 100vh;
@@ -323,6 +376,7 @@ body {
 .studybuddy-topbar {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 1rem;
 }
 
@@ -715,6 +769,13 @@ body {
   .studybuddy-input-footer {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .studybuddy-auth-bar,
+  .studybuddy-auth-shell,
+  .studybuddy-auth-actions {
+    width: 100%;
+    justify-content: flex-start;
   }
 
   .studybuddy-message-bubble {

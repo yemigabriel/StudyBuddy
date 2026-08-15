@@ -1,3 +1,4 @@
+import { Show, UserButton } from "@clerk/nextjs";
 import { ChangeEventHandler, ReactNode } from "react";
 
 import ActionButtons from "./ActionButtons";
@@ -66,6 +67,14 @@ export default function ChatLayout({
           <div className="studybuddy-session-pill">
             <span className="studybuddy-session-dot" />
             <span>Active Session: {activeSessionLabel}</span>
+          </div>
+          <div className="studybuddy-auth-shell">
+            <Show when="signed-in">
+              <div className="studybuddy-auth-user">
+                <span>My Account</span>
+                <UserButton afterSignOutUrl="/" />
+              </div>
+            </Show>
           </div>
         </header>
 
