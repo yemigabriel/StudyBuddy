@@ -1,5 +1,6 @@
 "use client";
 
+import { useAuth } from "@clerk/nextjs";
 import { ChangeEvent, FormEvent, useEffect, useState } from "react";
 
 import ChatLayout from "./ChatLayout";
@@ -48,6 +49,7 @@ function ensureBrowserSessionId(currentSessionId: string) {
 }
 
 export default function Home() {
+  const { isSignedIn } = useAuth();
   const [sessionId, setSessionId] = useState("");
   const [question, setQuestion] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
@@ -75,6 +77,29 @@ export default function Home() {
     window.sessionStorage.setItem("studybuddy-session-id", nextSessionId);
     setSessionId(nextSessionId);
   }, []);
+
+  useEffect(() => {
+    if (isSignedIn !== false) {
+      return;
+    }
+
+    window.sessionStorage.removeItem("studybuddy-session-id");
+    setSessionId("");
+    setQuestion("");
+    setMessages([]);
+    setPendingQuery("");
+    setPendingMode("qa");
+    setDisambiguation(null);
+    setUploads([]);
+    setQuizData(null);
+    setFlashcardsData(null);
+    setShowQuizModal(false);
+    setShowFlashcardsModal(false);
+    setIsSending(false);
+    setIsUploading(false);
+    setUploadError("");
+    setHasActiveDocument(false);
+  }, [isSignedIn]);
 
   async function handleUpload(event: ChangeEvent<HTMLInputElement>) {
     const input = event.currentTarget;
