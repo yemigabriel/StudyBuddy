@@ -28,6 +28,25 @@ def test_add_session_document_deduplicates_document_name() -> None:
     assert documents[0]["document_name"] == "notes.pdf"
 
 
+def test_add_session_document_rejects_more_than_five_unique_documents() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        with patch.object(memory_service, "MEMORY_DIR", Path(tmpdir)):
+            with patch("app.services.memory_service._upload_remote_state"):
+                for index in range(5):
+                    memory_service.add_session_document(
+                        "abc",
+                        f"doc-{index}",
+                        f"notes-{index}.pdf",
+                    )
+
+                try:
+                    memory_service.add_session_document("abc", "doc-6", "notes-6.pdf")
+                except ValueError as exc:
+                    assert str(exc) == "Document upload limit reached. You can upload up to 5 documents."
+                else:
+                    raise AssertionError("Expected upload limit error for sixth unique document.")
+
+
 def test_append_conversation_writes_user_and_assistant_messages() -> None:
     with tempfile.TemporaryDirectory() as tmpdir:
         with patch.object(memory_service, "MEMORY_DIR", Path(tmpdir)):

@@ -1,17 +1,21 @@
 import json
-
-from fastapi import FastAPI, File, Form, UploadFile
+import os
+import jwt
+from jwt import PyJWKClient
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile, Depends, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from mangum import Mangum
 
 from app.config import get_settings
-from app.models import ChatRequest, ChatResponse, UploadResponse
+from app.models import ChatRequest, ChatResponse, MemoryPreviewResponse, UploadResponse
 from app.services.chat_service import generate_chat_response, generate_chat_stream
 from app.services.memory_service import (
     append_conversation,
     get_selected_document,
     get_session_history,
+    get_session_state,
     list_session_documents,
     set_selected_document,
 )
@@ -20,6 +24,44 @@ from app.services.upload_service import ingest_upload
 
 settings = get_settings()
 app = FastAPI(title="StudyBuddy API", version="0.1.0")
+
+security = HTTPBearer()
+
+CLERK_JWT_PUBLIC_KEY = os.getenv("CLERK_JWT_PUBLIC_KEY")
+CLERK_JWKS_URL = os.getenv("CLERK_JWKS_URL")
+
+jwks_client = PyJWKClient(CLERK_JWKS_URL) if CLERK_JWKS_URL else None
+
+def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    token = credentials.credentials
+    print(f"token is {token}")
+    try:
+        if not jwks_client:
+            print("no public key set")
+            payload = jwt.decode(token, options={"verify_signature": False})
+            return payload.get("sub", "dev_fallback_user")
+        
+        signing_key = jwks_client.get_signing_key_from_jwt(token)
+        print(f"signing key: {signing_key}")
+        payload = jwt.decode(
+            token,
+            signing_key.key,
+            algorithms=["RS256"],
+            options={"verify_aud": False}
+        )
+        user_id = payload.get("sub")
+        print(f"user_id is {user_id}")
+        if not user_id:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Malformed authorization payload. Missing user id")
+        return user_id
+    except jwt.ExpiredSignatureError:
+         raise HTTPException(
+             status_code=status.HTTP_401_UNAUTHORIZED, 
+             detail="Session expired. Please log in again.")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Access denied. Invalid authentication signature.")    
 
 app.add_middleware(
     CORSMiddleware,
@@ -36,15 +78,30 @@ def health() -> dict[str, str]:
 
 @app.post("/upload", response_model=UploadResponse)
 async def upload_document(
-    session_id: str = Form(...),
     file: UploadFile = File(...),
+    user_id: str = Depends(get_current_user)
 ) -> UploadResponse:
-    document = await ingest_upload(file, session_id=session_id)
+    try:
+        document = await ingest_upload(file, session_id=user_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     return UploadResponse(**document)
 
 
+@app.get("/memory", response_model=MemoryPreviewResponse)
+def memory_preview(user_id: str = Depends(get_current_user)) -> MemoryPreviewResponse:
+    state = get_session_state(user_id)
+    return MemoryPreviewResponse(
+        session_id=user_id,
+        selected_document=state.get("selected_document"),
+        documents=state.get("documents", []),
+        messages=state.get("messages", []),
+    )
+
+
 @app.post("/chat", response_model=ChatResponse)
-def chat(request: ChatRequest) -> ChatResponse:
+def chat(request: ChatRequest, user_id: str = Depends(get_current_user)) -> ChatResponse:
+    request.session_id = user_id
     history, resolved_document_name, disambiguation = _resolve_chat_context(request)
     if disambiguation:
         return disambiguation
@@ -59,7 +116,8 @@ def chat(request: ChatRequest) -> ChatResponse:
 
 
 @app.post("/chat/stream")
-def chat_stream(request: ChatRequest) -> StreamingResponse:
+def chat_stream(request: ChatRequest, user_id: str = Depends(get_current_user)) -> StreamingResponse:
+    request.session_id = user_id
     history, resolved_document_name, disambiguation = _resolve_chat_context(request)
     if disambiguation:
         def disambiguation_stream() -> str:

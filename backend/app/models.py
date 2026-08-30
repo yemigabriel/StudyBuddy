@@ -50,3 +50,21 @@ class UploadResponse(BaseModel):
     chunks: int
     indexing_status: str
     error: str | None = None
+
+
+class MemoryMessage(BaseModel):
+    role: str
+    content: str
+    timestamp: str | None = None
+
+
+class MemoryDocument(BaseModel):
+    document_id: str | None = None
+    document_name: str
+
+
+class MemoryPreviewResponse(BaseModel):
+    session_id: str
+    selected_document: str | None = None
+    documents: list[MemoryDocument] = []
+    messages: list[MemoryMessage] = []

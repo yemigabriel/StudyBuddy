@@ -3,11 +3,12 @@ from typing import Iterator
 
 from fastapi.testclient import TestClient
 
-from app.main import app
+from app.main import app, get_current_user
 from app.models import ChatResponse
 
 
 client = TestClient(app)
+app.dependency_overrides[get_current_user] = lambda: "user_123"
 
 
 def parse_sse_events(raw_text: str) -> list[tuple[str, dict]]:
@@ -35,7 +36,10 @@ def test_health_endpoint_returns_ok() -> None:
 
 
 def test_upload_endpoint_returns_ingest_payload(monkeypatch) -> None:
+    captured_session_ids: list[str] = []
+
     async def fake_ingest_upload(file, session_id: str) -> dict:
+        captured_session_ids.append(session_id)
         return {
             "document_id": "doc-1",
             "document_name": file.filename,
@@ -60,13 +64,35 @@ def test_upload_endpoint_returns_ingest_payload(monkeypatch) -> None:
     body = response.json()
     assert body["document_id"] == "doc-1"
     assert body["indexing_status"] == "indexed"
+    assert captured_session_ids == ["user_123"]
+
+
+def test_upload_endpoint_returns_error_when_document_limit_is_reached(monkeypatch) -> None:
+    async def fake_ingest_upload(file, session_id: str) -> dict:
+        raise ValueError("Document upload limit reached. You can upload up to 5 documents.")
+
+    monkeypatch.setattr("app.main.ingest_upload", fake_ingest_upload)
+
+    response = client.post(
+        "/upload",
+        files={"file": ("notes.md", b"hello world", "text/markdown")},
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Document upload limit reached. You can upload up to 5 documents."
 
 
 def test_chat_endpoint_returns_standard_qa_response(monkeypatch) -> None:
-    monkeypatch.setattr("app.main.get_session_history", lambda _session_id: [])
+    requested_session_ids: list[str] = []
+    appended_session_ids: list[str] = []
+
+    monkeypatch.setattr("app.main.get_session_history", lambda session_id: requested_session_ids.append(session_id) or [])
     monkeypatch.setattr("app.main.list_session_documents", lambda _session_id: [])
     monkeypatch.setattr("app.main.get_selected_document", lambda _session_id: None)
-    monkeypatch.setattr("app.main.append_conversation", lambda *args, **kwargs: None)
+    monkeypatch.setattr(
+        "app.main.append_conversation",
+        lambda session_id, *_args, **_kwargs: appended_session_ids.append(session_id),
+    )
 
     def fake_generate_chat_response(request, history=None, document_name=None):
         return ChatResponse(
@@ -88,6 +114,8 @@ def test_chat_endpoint_returns_standard_qa_response(monkeypatch) -> None:
     body = response.json()
     assert body["response"] == "Answer text"
     assert body["mode"] == "qa"
+    assert requested_session_ids == ["user_123"]
+    assert appended_session_ids == ["user_123"]
 
 
 def test_chat_endpoint_returns_disambiguation_when_multiple_documents_exist(monkeypatch) -> None:
@@ -151,10 +179,15 @@ def test_chat_endpoint_uses_single_session_document_for_ambiguous_query(monkeypa
 
 
 def test_chat_stream_returns_qa_sse_events(monkeypatch) -> None:
+    appended_session_ids: list[str] = []
+
     monkeypatch.setattr("app.main.get_session_history", lambda _session_id: [])
     monkeypatch.setattr("app.main.list_session_documents", lambda _session_id: [])
     monkeypatch.setattr("app.main.get_selected_document", lambda _session_id: None)
-    monkeypatch.setattr("app.main.append_conversation", lambda *args, **kwargs: None)
+    monkeypatch.setattr(
+        "app.main.append_conversation",
+        lambda session_id, *_args, **_kwargs: appended_session_ids.append(session_id),
+    )
 
     def fake_generate_chat_stream(request, history=None, document_name=None):
         return ["chunk-a"], iter(["Hello", " world"])
@@ -173,6 +206,34 @@ def test_chat_stream_returns_qa_sse_events(monkeypatch) -> None:
     assert events[2] == ("chunk", {"content": " world"})
     assert events[-1][0] == "done"
     assert events[-1][1]["response"] == "Hello world"
+    assert events[0][1]["session_id"] == "user_123"
+    assert appended_session_ids == ["user_123"]
+
+
+def test_memory_endpoint_returns_existing_user_preview(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "app.main.get_session_state",
+        lambda _session_id: {
+            "selected_document": "biology.pdf",
+            "documents": [{"document_id": "doc-1", "document_name": "biology.pdf"}],
+            "messages": [
+                {
+                    "role": "user",
+                    "content": "What is mitosis?",
+                    "timestamp": "2026-08-30T10:00:00+00:00",
+                }
+            ],
+        },
+    )
+
+    response = client.get("/memory")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["session_id"] == "user_123"
+    assert body["selected_document"] == "biology.pdf"
+    assert body["documents"][0]["document_name"] == "biology.pdf"
+    assert body["messages"][0]["content"] == "What is mitosis?"
 
 
 def test_chat_stream_returns_summary_mode_done_event(monkeypatch) -> None:

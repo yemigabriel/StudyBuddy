@@ -20,3 +20,5 @@ rapidocr-onnxruntime==1.4.4
 beautifulsoup4==4.14.2
 uvicorn==0.35.0
 python-dotenv
+PyJWT[crypto]>=2.8.0
+cryptography>=42.0.0

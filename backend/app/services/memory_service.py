@@ -11,6 +11,7 @@ from app.config import get_settings
 
 SETTINGS = get_settings()
 MEMORY_DIR = Path(SETTINGS.memory_dir)
+MAX_SESSION_DOCUMENTS = 5
 
 
 def _session_path(session_id: str) -> Path:
@@ -111,6 +112,10 @@ def set_selected_document(session_id: str, document_name: str | None) -> None:
 def add_session_document(session_id: str, document_id: str, document_name: str) -> None:
     state = get_session_state(session_id)
     documents = state["documents"]
+    if len(documents) >= MAX_SESSION_DOCUMENTS and not any(
+        item.get("document_name") == document_name for item in documents
+    ):
+        raise ValueError(f"Document upload limit reached. You can upload up to {MAX_SESSION_DOCUMENTS} documents.")
     if not any(item.get("document_name") == document_name for item in documents):
         documents.append(
             {
