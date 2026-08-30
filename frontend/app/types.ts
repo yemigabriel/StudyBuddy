@@ -42,11 +42,25 @@ export type UploadResponse = {
   chunks: number;
   indexing_status: string;
   error?: string | null;
+  detail?: string | null;
 };
 
 export type Message = {
   role: "user" | "assistant";
   content: string;
+  timestamp?: string;
+};
+
+export type MemoryDocument = {
+  document_id?: string | null;
+  document_name: string;
+};
+
+export type MemoryPreviewResponse = {
+  session_id: string;
+  selected_document?: string | null;
+  documents: MemoryDocument[];
+  messages: Message[];
 };
 
 export type StreamEventPayload = {

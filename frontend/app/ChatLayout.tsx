@@ -8,6 +8,7 @@ type ChatLayoutProps = {
   children: ReactNode;
   footer: ReactNode;
   uploads: UploadResponse[];
+  uploadError: string;
   isUploading: boolean;
   isSending: boolean;
   onUpload: ChangeEventHandler<HTMLInputElement>;
@@ -19,6 +20,7 @@ export default function ChatLayout({
   children,
   footer,
   uploads,
+  uploadError,
   isUploading,
   isSending,
   onUpload,
@@ -57,6 +59,21 @@ export default function ChatLayout({
             <div className="studybuddy-upload-meta">
               {uploads.length > 0 ? `${uploads.length} document(s) uploaded` : "PDF · DOCX · TXT"}
             </div>
+            {uploadError ? (
+              <p className="studybuddy-upload-error">{uploadError}</p>
+            ) : null}
+            {hasUploads ? (
+              <div className="mt-4 space-y-2">
+                {uploads.map((upload) => (
+                  <div
+                    key={upload.document_id}
+                    className="rounded-2xl border border-slate-200/70 bg-slate-50 px-3 py-2 text-sm text-[#a1a7bc]"
+                  >
+                    {upload.document_name}
+                  </div>
+                ))}
+              </div>
+            ) : null}
           </section>
 
         </div>

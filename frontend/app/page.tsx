@@ -13,6 +13,7 @@ import {
   ChatMode,
   ChatResponse,
   FlashcardsPayload,
+  MemoryPreviewResponse,
   Message,
   QuizPayload,
   StreamEventPayload,
@@ -22,34 +23,44 @@ import {
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
 
-function createSessionId() {
-  if (
-    typeof globalThis.crypto !== "undefined" &&
-    typeof globalThis.crypto.randomUUID === "function"
-  ) {
-    return globalThis.crypto.randomUUID();
-  }
-
-  return `session-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+function createSessionId(userId: string | null | undefined) {
+  return userId ?? "";
 }
 
-function ensureBrowserSessionId(currentSessionId: string) {
+function ensureBrowserSessionId(
+  currentSessionId: string,
+  userId: string | null | undefined,
+) {
   if (currentSessionId) {
     return currentSessionId;
   }
 
-  const storedSessionId = window.sessionStorage.getItem("studybuddy-session-id");
-  if (storedSessionId) {
-    return storedSessionId;
+  const nextSessionId = createSessionId(userId);
+  if (nextSessionId) {
+    window.sessionStorage.setItem("studybuddy-session-id", nextSessionId);
   }
-
-  const nextSessionId = createSessionId();
-  window.sessionStorage.setItem("studybuddy-session-id", nextSessionId);
   return nextSessionId;
 }
 
+
+// const handleUpload = async (file) => {
+//   const token = await getToken(); // ◄ Grabs a secure JWT directly from Clerk
+  
+//   const formData = new FormData();
+//   formData.append("file", file);
+
+//   await fetch("https://run.app", {
+//     method: "POST",
+//     headers: {
+//       "Authorization": `Bearer ${token}` // ◄ Securely pass the authorization gate
+//     },
+//     body: formData
+//   });
+// };
+
+
 export default function Home() {
-  const { isSignedIn } = useAuth();
+  const { isSignedIn, getToken, userId  } = useAuth();
   const [sessionId, setSessionId] = useState("");
   const [question, setQuestion] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
@@ -67,16 +78,64 @@ export default function Home() {
   const [hasActiveDocument, setHasActiveDocument] = useState(false);
 
   useEffect(() => {
-    const savedSessionId = window.sessionStorage.getItem("studybuddy-session-id");
-    if (savedSessionId) {
-      setSessionId(savedSessionId);
+    const nextSessionId = createSessionId(userId);
+    setSessionId(nextSessionId);
+
+    if (nextSessionId) {
+      window.sessionStorage.setItem("studybuddy-session-id", nextSessionId);
       return;
     }
 
-    const nextSessionId = createSessionId();
-    window.sessionStorage.setItem("studybuddy-session-id", nextSessionId);
-    setSessionId(nextSessionId);
-  }, []);
+    window.sessionStorage.removeItem("studybuddy-session-id");
+  }, [userId]);
+
+  useEffect(() => {
+    async function loadMemoryPreview() {
+      if (!userId) {
+        return;
+      }
+
+      try {
+        const authToken = await getToken();
+        if (!authToken) {
+          return;
+        }
+
+        const response = await fetch(`${API_BASE_URL}/memory`, {
+          method: "GET",
+          headers: {
+            "Authorization": `Bearer ${authToken}`,
+          },
+        });
+
+        if (!response.ok) {
+          return;
+        }
+
+        const data = (await response.json()) as MemoryPreviewResponse;
+        setSessionId(data.session_id);
+        setMessages(data.messages ?? []);
+        setUploads(
+          (data.documents ?? []).map((document) => ({
+            document_id: document.document_id ?? document.document_name,
+            document_name: document.document_name,
+            filename: document.document_name,
+            content_type: "",
+            size: 0,
+            parsed_chunks: 0,
+            chunks: 0,
+            indexing_status: "indexed",
+            error: null,
+          })),
+        );
+        setHasActiveDocument((data.documents ?? []).length > 0);
+      } catch {
+        return;
+      }
+    }
+
+    void loadMemoryPreview();
+  }, [getToken, userId]);
 
   useEffect(() => {
     if (isSignedIn !== false) {
@@ -108,7 +167,7 @@ export default function Home() {
       return;
     }
 
-    const effectiveSessionId = ensureBrowserSessionId(sessionId);
+    const effectiveSessionId = ensureBrowserSessionId(sessionId, userId);
     if (!sessionId) {
       setSessionId(effectiveSessionId);
     }
@@ -119,9 +178,13 @@ export default function Home() {
     formData.append("session_id", effectiveSessionId);
     formData.append("file", file);
 
+    const authToken = await getToken();
     try {
       const response = await fetch(`${API_BASE_URL}/upload`, {
         method: "POST",
+        headers: {
+          "Authorization": `Bearer ${authToken}`
+        },
         body: formData,
       });
       const rawBody = await response.text();
@@ -129,8 +192,9 @@ export default function Home() {
 
       if (!response.ok || !data) {
         throw new Error(
+          data?.detail ||
           data?.error ||
-            `Upload failed with status ${response.status}.`,
+          `Upload failed with status ${response.status}.`,
         );
       }
 
@@ -170,10 +234,15 @@ export default function Home() {
       setMessages((current) => [...current, { role: "user", content: message }]);
     }
 
+    const authToken = await getToken();
+
     try {
       const response = await fetch(`${API_BASE_URL}/chat/stream`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Authorization": `Bearer ${authToken}`,
+          "Content-Type": "application/json"
+         },
         body: JSON.stringify({
           message,
           session_id: sessionId,
@@ -353,6 +422,7 @@ export default function Home() {
         isUploading={isUploading}
         onAction={(mode) => void handleAction(mode)}
         onUpload={handleUpload}
+        uploadError={uploadError}
         uploads={uploads}
       >
         <MessageList
