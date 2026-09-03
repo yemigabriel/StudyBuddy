@@ -55,6 +55,7 @@ Storage
 - Upload-first frontend flow
 - Quiz and flashcards modal UI
 - Pytest backend test suite with endpoint coverage
+- Offline RAG eval suite for retrieval checks, with optional answer checks when `OPENAI_API_KEY` is available
 - Terraform-based AWS deployment
 - GitHub Actions CI/CD pipeline
 
@@ -97,6 +98,30 @@ Run tests:
 ```bash
 cd backend
 uv run pytest tests -q
+```
+
+Run evals:
+
+```bash
+cd backend
+UV_CACHE_DIR=.uv-cache uv run python evals/runner.py --skip-answer
+```
+
+The command exits nonzero when a case fails. CI uses `--allow-failures` to publish the
+current metrics without masking the retrieval gaps it is meant to reveal.
+
+Run Ragas retrieval evals:
+
+```bash
+cd backend
+UV_CACHE_DIR=.uv-cache uv run python evals/ragas_runner.py
+```
+
+To include answer-quality checks locally, set `OPENAI_API_KEY` and run:
+
+```bash
+cd backend
+UV_CACHE_DIR=.uv-cache uv run python evals/runner.py
 ```
 
 ### Frontend
@@ -167,3 +192,12 @@ The repository now includes:
 - Upload transitions to chat only after successful ingestion/indexing.
 - Memory is stored locally first, then synced to the configured object store.
 - The current `/upload` API path is best for smaller files; larger files should eventually move to direct-to-S3 upload plus async ingestion.
+
+## Evaluation
+
+- Eval fixtures live in `backend/evals/fixtures`
+- Eval cases live in `backend/evals/dataset.jsonl`
+- The runner reports per-case retrieval pass/fail deterministically in CI
+- A separate Ragas runner reports `context_precision` and `context_recall`
+- Answer checks are optional and can be run locally with a real `OPENAI_API_KEY`
+- This keeps regression checks lightweight while still demonstrating production-minded RAG quality measurement

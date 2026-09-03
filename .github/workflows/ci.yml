@@ -33,6 +33,10 @@ jobs:
         working-directory: backend
         run: python -m pytest tests -q
 
+      - name: Run retrieval evals
+        working-directory: backend
+        run: python evals/runner.py --skip-answer --allow-failures
+
       - name: Verify backend app
         working-directory: backend
         run: python -c "from server import app; print(app.title)"
