@@ -34,8 +34,8 @@ export default function ChatLayout({
       <aside className="studybuddy-sidebar">
         <div>
           <div className="studybuddy-brand">
-            <h1>StudyBuddy AI</h1>
-            <p>Your personal study assistant</p>
+            <h1>StudyBuddy</h1>
+            <p>Study from your own documents</p>
             <p></p>
           </div>
         </div>
@@ -67,7 +67,7 @@ export default function ChatLayout({
                 {uploads.map((upload) => (
                   <div
                     key={upload.document_id}
-                    className="rounded-2xl border border-slate-200/70 bg-slate-50 px-3 py-2 text-sm text-[#a1a7bc]"
+                    className="rounded-2xl border border-black/10 bg-black/[0.03] px-3 py-2 text-sm text-[#8c8c8c]"
                   >
                     {upload.document_name}
                   </div>

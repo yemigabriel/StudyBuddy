@@ -37,24 +37,21 @@ export default function UploadScreen({
         </Show>
       </div>
 
-      <div className="studybuddy-upload-hero">
-        <div className="studybuddy-empty-badge">StudyBuddy</div>
-        <h1>
-          Transform notes into <span>intelligence.</span>
-        </h1>
+      <div className="studybuddy-upload-intro">
+        <p className="studybuddy-upload-kicker">StudyBuddy</p>
+        <h1>Study from your own documents</h1>
         <p>
-          Learn faster. Upload your study materials to chat, and generate quizzes, flashcards, and summaries.
+          Upload a PDF, DOCX, or TXT file to start a study session.
         </p>
       </div>
 
       <section className="studybuddy-upload-card">
         <label className="studybuddy-upload-dropzone studybuddy-upload-dropzone-large">
           <span className="studybuddy-upload-icon">↑</span>
-          <h2>Upload Document</h2>
           <span className="studybuddy-upload-copy">
             {isUploading
               ? "Uploading and preparing your document..."
-              : "Drop your PDF, DOCX or TXT files here to start."}
+              : "Drop your file here or browse to upload."}
           </span>
           <span className="studybuddy-upload-button">Browse Files</span>
           <input className="hidden" onChange={onUpload} type="file" />
@@ -67,10 +64,6 @@ export default function UploadScreen({
           <p className="studybuddy-upload-error">{uploadError}</p>
         ) : null}
       </section>
-
-      <p className="studybuddy-upload-footnote">
-        Simple, secure, and focused learning.
-      </p>
     </main>
   );
 }

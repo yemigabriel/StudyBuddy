@@ -34,19 +34,19 @@ export default function FlashcardsModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/45 px-4 py-6">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/20 px-4 py-6">
       <div className="mx-auto flex min-h-full w-full max-w-2xl items-center justify-center">
-        <div className="w-full max-w-2xl overflow-y-auto rounded-[32px] bg-white p-6 shadow-[0_28px_70px_rgba(54,59,123,0.25)] studybuddy-modal-panel">
+        <div className="studybuddy-modal-panel w-full max-w-2xl overflow-y-auto rounded-[24px] border border-black/10 bg-white p-6 shadow-[0_18px_40px_rgba(0,0,0,0.10)]">
         <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3 text-sm font-semibold text-slate-700">
-            <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#eef0ff] text-[#4c4cf0]">
+          <div className="flex items-center gap-3 text-sm font-semibold text-neutral-700">
+            <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-black/[0.05] text-black">
               ◫
             </span>
             <span>Study Flashcards</span>
           </div>
           <button
             aria-label="Close flashcards"
-            className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
+            className="inline-flex items-center gap-2 rounded-full border border-black/10 px-4 py-2 text-sm font-semibold text-neutral-600 transition hover:bg-black/[0.04] hover:text-black"
             onClick={onClose}
             type="button"
           >
@@ -56,13 +56,13 @@ export default function FlashcardsModal({
         </div>
 
         <div className="mt-5 flex items-center gap-4">
-          <div className="h-2 flex-1 overflow-hidden rounded-full bg-slate-100">
+          <div className="h-2 flex-1 overflow-hidden rounded-full bg-black/[0.06]">
             <div
-              className="h-full rounded-full bg-[#4b4cf3] transition-all"
+              className="h-full rounded-full bg-black transition-all"
               style={{ width: `${((currentIndex + 1) / totalCards) * 100}%` }}
             />
           </div>
-          <span className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">
+          <span className="text-xs font-semibold uppercase tracking-[0.22em] text-neutral-400">
             {currentIndex + 1} / {totalCards}
           </span>
         </div>
@@ -84,7 +84,7 @@ export default function FlashcardsModal({
 
         <div className="mt-6 flex justify-center">
           <button
-            className="rounded-full bg-[#4b4cf3] px-8 py-3 text-sm font-semibold text-white shadow-[0_14px_28px_rgba(75,76,243,0.3)]"
+            className="rounded-full bg-black px-8 py-3 text-sm font-semibold text-white shadow-[0_10px_20px_rgba(0,0,0,0.12)]"
             onClick={() => setFlipped((current) => !current)}
             type="button"
           >
@@ -92,22 +92,9 @@ export default function FlashcardsModal({
           </button>
         </div>
 
-        <p className="mt-4 text-center text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">
-          How well did you know this?
-        </p>
-
-        <div className="mt-5 grid gap-4 sm:grid-cols-2">
-          <div className="rounded-2xl border border-rose-100 bg-rose-50 px-4 py-5 text-center text-sm font-semibold text-rose-500">
-            Still learning
-          </div>
-          <div className="rounded-2xl border border-indigo-100 bg-indigo-50 px-4 py-5 text-center text-sm font-semibold text-[#4b4cf3]">
-            I knew it
-          </div>
-        </div>
-
         <div className="mt-8 flex items-center justify-between">
           <button
-            className="rounded-full border border-slate-200 px-5 py-3 text-sm font-medium text-slate-600 transition hover:bg-slate-50 disabled:opacity-40"
+            className="rounded-full border border-black/10 px-5 py-3 text-sm font-medium text-neutral-600 transition hover:bg-black/[0.04] disabled:opacity-40"
             disabled={currentIndex === 0}
             onClick={goToPrevious}
             type="button"
@@ -116,14 +103,14 @@ export default function FlashcardsModal({
           </button>
           <div className="flex items-center gap-3">
             <button
-              className="rounded-full border border-slate-200 px-5 py-3 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
+              className="rounded-full border border-black/10 px-5 py-3 text-sm font-medium text-neutral-600 transition hover:bg-black/[0.04]"
               onClick={onClose}
               type="button"
             >
               Exit Flashcards
             </button>
             <button
-              className="rounded-full bg-[#4b4cf3] px-5 py-3 text-sm font-semibold text-white transition disabled:opacity-40"
+              className="rounded-full bg-black px-5 py-3 text-sm font-semibold text-white transition disabled:opacity-40"
               disabled={currentIndex === totalCards - 1}
               onClick={goToNext}
               type="button"

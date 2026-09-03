@@ -43,15 +43,15 @@ export default function QuizModal({ quizData, onClose }: QuizModalProps) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-4">
-      <div className="w-full max-w-3xl rounded-[28px] bg-white p-6 shadow-[0_30px_80px_rgba(58,61,149,0.22)]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 px-4">
+      <div className="w-full max-w-3xl rounded-[24px] border border-black/10 bg-white p-6 shadow-[0_18px_40px_rgba(0,0,0,0.10)]">
         <div className="flex items-center justify-between gap-4">
-          <div className="text-xs font-semibold uppercase tracking-[0.22em] text-[#7d7ef7]">
+          <div className="text-xs font-semibold uppercase tracking-[0.22em] text-neutral-500">
             Question {currentIndex + 1} of {totalQuestions}
           </div>
           <button
             aria-label="Close quiz"
-            className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
+            className="inline-flex items-center gap-2 rounded-full border border-black/10 px-4 py-2 text-sm font-semibold text-neutral-600 transition hover:bg-black/[0.04] hover:text-black"
             onClick={onClose}
             type="button"
           >
@@ -60,18 +60,18 @@ export default function QuizModal({ quizData, onClose }: QuizModalProps) {
           </button>
         </div>
 
-        <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-slate-200">
+        <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-black/[0.08]">
           <div
-            className="h-full rounded-full bg-[#4b4cf3]"
+            className="h-full rounded-full bg-black"
             style={{ width: `${((currentIndex + 1) / totalQuestions) * 100}%` }}
           />
         </div>
 
         <div className="mt-12">
-          <h3 className="max-w-2xl text-2xl font-semibold leading-snug text-slate-900">
+          <h3 className="max-w-2xl text-2xl font-semibold leading-snug text-neutral-900">
             {question.question}
           </h3>
-          <div className="mt-4 h-1 w-16 rounded-full bg-[#4b4cf3]" />
+          <div className="mt-4 h-1 w-16 rounded-full bg-black" />
         </div>
 
         <div className="mt-10 space-y-4">
@@ -87,19 +87,19 @@ export default function QuizModal({ quizData, onClose }: QuizModalProps) {
                 key={`${currentIndex}-${option}`}
                 className={`flex cursor-pointer items-center gap-4 rounded-2xl border px-5 py-4 transition ${
                   isCorrectHighlight
-                    ? "border-[#4b4cf3] bg-[#eef0ff]"
+                    ? "border-black bg-black/[0.04]"
                     : isWrongSelection
-                      ? "border-rose-300 bg-rose-50"
+                      ? "border-neutral-300 bg-neutral-100"
                       : isSelected
-                        ? "border-[#4b4cf3] bg-white shadow-[0_12px_22px_rgba(75,76,243,0.12)]"
-                        : "border-slate-200 bg-slate-50/70 hover:bg-white"
+                        ? "border-black bg-white shadow-[0_10px_20px_rgba(0,0,0,0.08)]"
+                        : "border-black/10 bg-black/[0.02] hover:bg-white"
                 }`}
               >
                 <span
                   className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-sm font-semibold ${
                     isSelected || isCorrectHighlight
-                      ? "bg-[#4b4cf3] text-white"
-                      : "bg-white text-slate-500"
+                      ? "bg-black text-white"
+                      : "bg-white text-neutral-500"
                   }`}
                 >
                   {key}
@@ -118,9 +118,9 @@ export default function QuizModal({ quizData, onClose }: QuizModalProps) {
                   type="radio"
                   value={option}
                 />
-                <span className="text-sm font-medium text-slate-700">{option}</span>
+                <span className="text-sm font-medium text-neutral-700">{option}</span>
                 {isSelected ? (
-                  <span className="ml-auto text-[#4b4cf3]">●</span>
+                  <span className="ml-auto text-black">●</span>
                 ) : null}
               </label>
             );
@@ -129,7 +129,7 @@ export default function QuizModal({ quizData, onClose }: QuizModalProps) {
 
         <div className="mt-10 flex items-center justify-between gap-3">
           <button
-            className="rounded-full px-4 py-3 text-sm font-medium text-slate-500 transition hover:bg-slate-50 disabled:opacity-40"
+            className="rounded-full px-4 py-3 text-sm font-medium text-neutral-500 transition hover:bg-black/[0.04] disabled:opacity-40"
             disabled={currentIndex === 0}
             onClick={handlePrevious}
             type="button"
@@ -139,13 +139,13 @@ export default function QuizModal({ quizData, onClose }: QuizModalProps) {
 
           <div className="flex items-center gap-3">
             {showResults ? (
-              <p className="text-sm font-semibold text-slate-700">
+              <p className="text-sm font-semibold text-neutral-700">
                 Score: {score}/{totalQuestions}
               </p>
             ) : null}
             {showResults ? (
               <button
-                className="rounded-full border border-slate-200 px-5 py-3 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
+                className="rounded-full border border-black/10 px-5 py-3 text-sm font-medium text-neutral-600 transition hover:bg-black/[0.04]"
                 onClick={handleRetry}
                 type="button"
               >
@@ -153,7 +153,7 @@ export default function QuizModal({ quizData, onClose }: QuizModalProps) {
               </button>
             ) : (
               <button
-                className="rounded-full border border-slate-200 px-5 py-3 text-sm font-medium text-slate-500 transition hover:bg-slate-50"
+                className="rounded-full border border-black/10 px-5 py-3 text-sm font-medium text-neutral-500 transition hover:bg-black/[0.04]"
                 onClick={() => setShowResults(true)}
                 type="button"
               >
@@ -161,14 +161,14 @@ export default function QuizModal({ quizData, onClose }: QuizModalProps) {
               </button>
             )}
             <button
-              className="rounded-full border border-slate-200 px-5 py-3 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
+              className="rounded-full border border-black/10 px-5 py-3 text-sm font-medium text-neutral-600 transition hover:bg-black/[0.04]"
               onClick={onClose}
               type="button"
             >
               Exit Quiz
             </button>
             <button
-              className="rounded-full bg-[#4b4cf3] px-6 py-3 text-sm font-semibold text-white shadow-[0_14px_26px_rgba(75,76,243,0.28)] disabled:opacity-40"
+              className="rounded-full bg-black px-6 py-3 text-sm font-semibold text-white shadow-[0_10px_18px_rgba(0,0,0,0.1)] disabled:opacity-40"
               disabled={currentIndex === totalQuestions - 1}
               onClick={handleNext}
               type="button"
