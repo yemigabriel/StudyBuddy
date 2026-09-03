@@ -89,7 +89,7 @@ export default function ChatLayout({
             <Show when="signed-in">
               <div className="studybuddy-auth-user">
                 <span>My Account</span>
-                <UserButton afterSignOutUrl="/" />
+                <UserButton />
               </div>
             </Show>
           </div>

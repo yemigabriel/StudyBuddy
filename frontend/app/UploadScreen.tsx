@@ -32,7 +32,7 @@ export default function UploadScreen({
         <Show when="signed-in">
           <div className="studybuddy-auth-user">
             <span>Signed in</span>
-            <UserButton afterSignOutUrl="/" />
+            <UserButton />
           </div>
         </Show>
       </div>
